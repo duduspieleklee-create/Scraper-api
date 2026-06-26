@@ -112,7 +112,8 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         from sqlalchemy import case as sql_case
         wh_result = await db.execute(select(func.count(TokenTransaction.id).label("total"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_ok%"), 1), else_=0)).label("ok"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_fail%"), 1), else_=0)).label("fail")))
         wh_row = wh_result.first()
-        webhook_ok = int(wh_row.ok) if wh_row.ok is not None else 0
+        # Robustere Version
+        webhook_ok = 1 if getattr(wh_row, 'ok', None) in (True, 1, "1") else 0
         webhook_fail = int(wh_row.fail)
         from sqlalchemy import cast, Date as SQLDate
         ads_per_day_raw = await db.execute(select(cast(SeenAd.first_seen, SQLDate).label("day"), func.count(SeenAd.id).label("cnt")).where(SeenAd.first_seen >= now - timedelta(days=7)).group_by("day").order_by("day"))
@@ -134,7 +135,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         searches_with_counts = rows.all()
         recent_ads_result = await db.execute(select(SeenAd).order_by(SeenAd.first_seen.desc()).limit(15))
         recent_ads = recent_ads_result.scalars().all()
-        return templates.TemplateResponse(request=request, name="dashboard.html", context={"uptime_str": uptime_str, "pid": pid, "db_ok": db_ok, "worker_online": worker_online, "worker_last_seen_str": worker_last_seen_str, "cpu": cpu, "memory_percent": mem.percent, "memory_used_gb": round(mem.used / (1024 ** 3), 1), "memory_total_gb": round(mem.total / (1024 ** 3), 1), "disk_percent": disk.percent, "disk_used_gb": round(disk.used / (1024 ** 3), 1), "disk_total_gb": round(disk.total / (1024 ** 3), 1), "total_searches": total_searches, "active_searches": active_searches, "paused_searches": paused_searches, "total_ads": total_ads, "ads_24h": ads_24h, "ads_per_day": ads_per_day, "total_users": total_users, "active_proxies": active_proxies, "total_proxies": total_proxies, "proxy_list": proxy_list, "tokens_spent": tokens_spent, "tokens_24h": tokens_24h, "webhook_ok": webhook_ok, "webhook_fail": webhook_fail, "top_searches": top_searches, "price_min": price_min, "price_max": price_max, "price_avg": price_avg, "price_count": price_count, "searches_with_counts": searches_with_counts, "recent_ads": recent_ads, "now": now, "error": None})
+        return templates.TemplateResponse(request=request, name="dashboard.html", context={"uptime_str": uptime_str, "pid": pid, "db_ok": db_ok, "worker_online": worker_online, "worker_last_seen_str": worker_last_seen_str, "cpu": cpu, "memory_percent": mem.percent, "memory_used_gb": round(mem.used / (1024 ** 3), 1), "memory_total_gb": round(mem.total / (1024 ** 3), 1), "disk_percent": disk.percent, "disk_used_gb": round(disk.used / (1024 ** 3), 1), "disk_total_gb": round(disk.total / (1024 ** 3), 1), "total_searches": total_searches, "active_searches": active_searches, "paused_searches": paused_searches, "total_ads": total_ads, "ads_24h": ads_24h, "ads_per_day": ads_per_day, "total_users": total_users, "active_proxies": active_proxies, "total_proxies": total_proxies, "proxy_list": proxy_list, "tokens_spent": tokens_spent, "tokens_24h": tokens_24h, "webhook_ok": webhook_ok, "webhook_fail": we   bhook_fail, "top_searches": top_searches, "price_min": price_min, "price_max": price_max, "price_avg": price_avg, "price_count": price_count, "searches_with_counts": searches_with_counts, "recent_ads": recent_ads, "now": now, "error": None})
     except Exception as exc:
         import traceback
         traceback.print_exc()
