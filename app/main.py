@@ -1,21 +1,27 @@
 from fastapi import FastAPI, Query
+from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse, HTMLResponse
-import uvicorn
-import httpx
-from bs4 import BeautifulSoup
-from datetime import datetime
-from typing import List, Dict
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
+import psutil
 
-from app.routers import searches
-from app.routers import auth as auth_router
-from app.core.database import engine, Base
-from app.models import search, user, token_transaction, seen_ad  # alle Modelle registrieren
-
+from app.core.database import get_db
+from app.models.search import Search
+from app.models.seen_ad import SeenAd
+from app.models.user import User
+from app.models.token_transaction import TokenTransaction
 app = FastAPI(
     title="Kleinanzeigen Notifier API",
     description="Automatische Benachrichtigungs-App fuer kleinanzeigen.de",
     version="2.0.0"
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+templates.env.globals["timedelta"] = timedelta
 
 # Router einbinden
 app.include_router(searches.router)
