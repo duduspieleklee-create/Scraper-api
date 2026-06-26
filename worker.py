@@ -1,9 +1,3 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# UPDATED worker.py — replace your existing worker.py with this
-# Adds a heartbeat write to the DB every 60s so the dashboard
-# can show worker Online/Offline status.
-# ─────────────────────────────────────────────────────────────────────────────
-
 import asyncio
 import logging
 from datetime import datetime
@@ -34,7 +28,11 @@ async def write_heartbeat(jobs_count: int = 0):
                 .values(last_seen=datetime.utcnow(), jobs_scheduled=jobs_count)
             )
         else:
-            db.add(WorkerHeartbeat(worker_name="main", last_seen=datetime.utcnow(), jobs_scheduled=jobs_count))
+            db.add(WorkerHeartbeat(
+                worker_name="main",
+                last_seen=datetime.utcnow(),
+                jobs_scheduled=jobs_count
+            ))
         await db.commit()
     logger.debug("Heartbeat geschrieben")
 
@@ -72,11 +70,23 @@ async def heartbeat_tick():
 async def main():
     await load_and_schedule()
 
-    # Stündlich neu laden
-    scheduler.add_job(load_and_schedule, "interval", hours=1, id="reload_searches", replace_existing=True)
+    # Stündlich neu laden (neue Suchen aufnehmen)
+    scheduler.add_job(
+        load_and_schedule,
+        "interval",
+        hours=1,
+        id="reload_searches",
+        replace_existing=True
+    )
 
     # Heartbeat every 60s
-    scheduler.add_job(heartbeat_tick, "interval", seconds=60, id="heartbeat", replace_existing=True)
+    scheduler.add_job(
+        heartbeat_tick,
+        "interval",
+        seconds=60,
+        id="heartbeat",
+        replace_existing=True
+    )
 
     scheduler.start()
     logger.info("Background Worker gestartet")
