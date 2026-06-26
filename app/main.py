@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.routers import searches
-from app.core.database import engine, Base, get_db, AsyncSessionLocal  # <-- WICHTIG: hinzufügen
+from app.core.database import engine, Base, get_db, AsyncSessionLocal
 from app.config import settings
 
 app = FastAPI(
@@ -22,6 +22,8 @@ app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+logger = logging.getLogger(__name__)
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
@@ -36,7 +38,6 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             "searches": searches_list
         })
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Dashboard Error: {e}")
         return {"error": str(e)}
 
@@ -45,7 +46,7 @@ async def startup_event():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
-    async with AsyncSessionLocal() as db:  # <-- Jetzt definiert
+    async with AsyncSessionLocal() as db:
         # Default Data
         result = await db.execute(text("SELECT COUNT(*) FROM users"))
         if result.scalar() == 0:
