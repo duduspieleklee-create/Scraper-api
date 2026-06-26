@@ -6,6 +6,23 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+
+@app.get("/")
+def read_root():
+    return {"message": "Scraper API is running"}
+
+@app.get("/scrape")
+def scrape(url: str):
+    # your scraping code here
+    return {"url": url, "status": "scraped"}
+
+
+
 from app.routers import searches
 from app.core.database import engine, Base, get_db
 from app.config import settings
@@ -15,6 +32,9 @@ app = FastAPI(
     description="API für automatisierte Kleinanzeigen-Suchen mit Token-System",
     version="1.0.0"
 )
+
+
+
 
 # Router einbinden
 app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
