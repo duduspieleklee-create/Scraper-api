@@ -1,58 +1,30 @@
-import logging
-from fastapi import FastAPI, Request, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-
-from app.routers import searches
-from app.core.database import engine, Base, get_db
-from app.config import settings
-
-app = FastAPI(
-    title="Kleinanzeigen Notifier API",
-    description="API für automatisierte Kleinanzeigen-Suchen mit Token-System",
-    version="1.0.0"
-)
-
-# Router einbinden
-app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
-
-# Dashboard Setup
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
-
-
-
 @app.get("/dashboard", include_in_schema=False)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
-        # Richtige Umwandlung in einfache Dicts
-        searches_list = [dict(row) for row in result.mappings()]
+        
+        # Robuste Umwandlung in einfache Python-Dicts
+        searches_list = []
+        for row in result:
+            searches_list.append({
+                "id": row.id,
+                "name": row.name,
+                "keyword": row.keyword,
+                "interval_minutes": row.interval_minutes,
+                "enabled": row.enabled,
+                "last_run": row.last_run.isoformat() if row.last_run else None,
+                "created_at": row.created_at.isoformat() if hasattr(row, 'created_at') and row.created_at else None
+            })
         
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "searches": searches_list
         })
     except Exception as e:
-        return {"error": str(e)}
-
-
-
-
-
-
-@app.on_event("startup")
-async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("🚀 API gestartet - Dashboard unter /dashboard")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        logger = logging.getLogger(__name__)
+        logger.error(f"Dashboard Error: {e}")
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "searches": [],
+            "error": str(e)
+        })
