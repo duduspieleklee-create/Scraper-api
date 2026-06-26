@@ -32,13 +32,20 @@ async def health():
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
-        searches_list = [dict(row._mapping) for row in result]
+        searches_list = []
+        for row in result:
+            searches_list.append({
+                "name": row.name,
+                "keyword": row.keyword,
+                "interval_minutes": row.interval_minutes,
+                "enabled": row.enabled,
+                "last_run": str(row.last_run) if row.last_run else "Nie"
+            })
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "searches": searches_list
         })
     except Exception as e:
-        logger.error(f"Dashboard Error: {e}")
         return {"error": str(e)}
 
 @app.on_event("startup")
