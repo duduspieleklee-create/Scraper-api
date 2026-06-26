@@ -17,7 +17,7 @@ app = FastAPI(
 # Router einbinden
 app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
 
-# === Dashboard Setup ===
+# Dashboard Setup
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -30,12 +30,20 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
         searches_list = [dict(row._mapping) for row in result]
+        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "searches": searches_list
+            "searches": searches_list,
+            "error": None
         })
     except Exception as e:
-        return {"error": str(e)}
+        logger = logging.getLogger(__name__)
+        logger.error(f"Dashboard Error: {e}")
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "searches": [],
+            "error": str(e)
+        })
 
 @app.on_event("startup")
 async def startup_event():
