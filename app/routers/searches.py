@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel
 from typing import Optional, List
 
 from app.core.database import get_db
+from app.core.auth import get_current_user, TokenData
 from app.models.search import Search
 
 router = APIRouter()
@@ -40,11 +41,11 @@ class SearchResponse(BaseModel):
 @router.post("/searches", response_model=dict)
 async def create_search(
     data: SearchCreate,
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = Search(
-        user_id=user_id,
+        user_id=current_user.user_id,
         name=data.name or data.keyword,
         keyword=data.keyword,
         location=data.location,
@@ -58,21 +59,16 @@ async def create_search(
     db.add(search)
     await db.commit()
     await db.refresh(search)
-
-    return {
-        "search_id": search.id,
-        "name": search.name,
-        "status": "created"
-    }
+    return {"search_id": search.id, "name": search.name, "status": "created"}
 
 
 @router.get("/searches", response_model=List[SearchResponse])
 async def list_searches(
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        select(Search).where(Search.user_id == user_id).order_by(Search.created_at.desc())
+        select(Search).where(Search.user_id == current_user.user_id).order_by(Search.created_at.desc())
     )
     return result.scalars().all()
 
@@ -80,13 +76,13 @@ async def list_searches(
 @router.get("/searches/{search_id}", response_model=SearchResponse)
 async def get_search(
     search_id: int,
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != user_id:
+    if search.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Kein Zugriff")
     return search
 
@@ -94,13 +90,13 @@ async def get_search(
 @router.post("/searches/{search_id}/pause")
 async def pause_search(
     search_id: int,
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != user_id:
+    if search.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Kein Zugriff")
     search.enabled = False
     await db.commit()
@@ -110,13 +106,13 @@ async def pause_search(
 @router.post("/searches/{search_id}/resume")
 async def resume_search(
     search_id: int,
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != user_id:
+    if search.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Kein Zugriff")
     search.enabled = True
     await db.commit()
@@ -126,13 +122,13 @@ async def resume_search(
 @router.delete("/searches/{search_id}")
 async def delete_search(
     search_id: int,
-    user_id: str = Header(..., alias="X-User-ID"),
+    current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != user_id:
+    if search.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Kein Zugriff")
     await db.delete(search)
     await db.commit()
