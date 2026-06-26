@@ -1,1 +1,31 @@
-{{ search.name }}
+<!DOCTYPE html>
+<html>
+<head><title>Dashboard</title></head>
+<body>
+    <h1>Kleinanzeigen Dashboard</h1>
+    
+    {% if error %}
+    <p style="color:red; background:#ffe6e6; padding:10px;">{{ error }}</p>
+    {% else %}
+    <p>Anzahl Suchen: {{ searches|length }}</p>
+    <table border="1">
+        <tr>
+            <th>Name</th>
+            <th>Keyword</th>
+            <th>Interval</th>
+            <th>Status</th>
+            <th>Last Run</th>
+        </tr>
+        {% for s in searches %}
+        <tr>
+            <td>{{ s.name }}</td>
+            <td>{{ s.keyword }}</td>
+            <td>{{ s.interval_minutes }} min</td>
+            <td>{{ 'Aktiv' if s.enabled else 'Pausiert' }}</td>
+            <td>{{ s.last_run or 'Nie' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% endif %}
+</body>
+</html>
