@@ -11,6 +11,10 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    @property
+    def async_database_url(self):
+        return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
     def assemble_db_connection(uri):
         return Settings.DATABASE_URL(uri, "postgresql+asyncpg://", 1)
 
