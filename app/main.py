@@ -26,12 +26,15 @@ async def health():
 
 @app.get("/dashboard", include_in_schema=False)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
-    result = await db.execute("SELECT * FROM searches")
-    searches_list = result.fetchall()
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "searches": searches_list
-    })
+    try:
+        result = await db.execute("SELECT * FROM searches")
+        searches_list = result.fetchall()
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "searches": searches_list
+        })
+    except Exception as e:
+        return {"error": str(e), "message": "Dashboard-Fehler – prüfe Logs"}
 
 @app.on_event("startup")
 async def startup_event():
