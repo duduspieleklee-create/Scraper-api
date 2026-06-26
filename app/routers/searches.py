@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 
 from app.core.database import get_db
 from app.models.search import Search
 
 router = APIRouter()
+
 
 class SearchCreate(BaseModel):
     keyword: str
@@ -18,7 +20,24 @@ class SearchCreate(BaseModel):
     interval_minutes: int = 15
     callback_url: Optional[str] = None
 
-@router.post("/searches")
+
+class SearchResponse(BaseModel):
+    id: int
+    name: str
+    keyword: str
+    location: Optional[str]
+    price_min: Optional[int]
+    price_max: Optional[int]
+    category: Optional[str]
+    interval_minutes: int
+    callback_url: Optional[str]
+    enabled: bool
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/searches", response_model=dict)
 async def create_search(
     data: SearchCreate,
     user_id: str = Header(..., alias="X-User-ID"),
@@ -46,31 +65,75 @@ async def create_search(
         "status": "created"
     }
 
-@router.get("/searches")
+
+@router.get("/searches", response_model=List[SearchResponse])
 async def list_searches(
     user_id: str = Header(..., alias="X-User-ID"),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
-        "SELECT * FROM searches WHERE user_id = :user_id ORDER BY created_at DESC",
-        {"user_id": user_id}
+        select(Search).where(Search.user_id == user_id).order_by(Search.created_at.desc())
     )
-    return result.fetchall()
+    return result.scalars().all()
 
-@router.post("/searches/{search_id}/pause")
-async def pause_search(search_id: int, db: AsyncSession = Depends(get_db)):
+
+@router.get("/searches/{search_id}", response_model=SearchResponse)
+async def get_search(
+    search_id: int,
+    user_id: str = Header(..., alias="X-User-ID"),
+    db: AsyncSession = Depends(get_db)
+):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
+    if search.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Kein Zugriff")
+    return search
+
+
+@router.post("/searches/{search_id}/pause")
+async def pause_search(
+    search_id: int,
+    user_id: str = Header(..., alias="X-User-ID"),
+    db: AsyncSession = Depends(get_db)
+):
+    search = await db.get(Search, search_id)
+    if not search:
+        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
+    if search.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Kein Zugriff")
     search.enabled = False
     await db.commit()
     return {"status": "paused"}
 
+
 @router.post("/searches/{search_id}/resume")
-async def resume_search(search_id: int, db: AsyncSession = Depends(get_db)):
+async def resume_search(
+    search_id: int,
+    user_id: str = Header(..., alias="X-User-ID"),
+    db: AsyncSession = Depends(get_db)
+):
     search = await db.get(Search, search_id)
     if not search:
         raise HTTPException(status_code=404, detail="Suche nicht gefunden")
+    if search.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Kein Zugriff")
     search.enabled = True
     await db.commit()
     return {"status": "resumed"}
+
+
+@router.delete("/searches/{search_id}")
+async def delete_search(
+    search_id: int,
+    user_id: str = Header(..., alias="X-User-ID"),
+    db: AsyncSession = Depends(get_db)
+):
+    search = await db.get(Search, search_id)
+    if not search:
+        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
+    if search.user_id != user_id:
+        raise HTTPException(status_code=403, detail="Kein Zugriff")
+    await db.delete(search)
+    await db.commit()
+    return {"status": "deleted"}
