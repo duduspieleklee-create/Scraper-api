@@ -2,14 +2,18 @@
 <html>
 <head><title>Dashboard</title></head>
 <body>
-    <h1>Kleinanzeigen Dashboard</h1>
+    <h1>🛒 Kleinanzeigen Dashboard</h1>
     
     {% if error %}
-    <h2 style="color:red;">Fehler aufgetreten</h2>
-    <p><strong>{{ error }}</strong></p>
-    <pre style="background:#f8f8f8; padding:10px; overflow:auto;">{{ traceback }}</pre>
+    <p style="color:red;">Fehler: {{ error }}</p>
     {% else %}
-    <p>Anzahl Suchen: {{ searches|length }}</p>
+    <h2>Server Status</h2>
+    <p>CPU: {{ cpu }}%</p>
+    <p>Memory: {{ memory }}%</p>
+    <p>Disk: {{ disk }}%</p>
+    <p>Aktive Suchen: <strong>{{ active_searches }}</strong></p>
+    
+    <h2>Suchen ({{ searches|length }})</h2>
     <table border="1">
         <tr>
             <th>Name</th>
