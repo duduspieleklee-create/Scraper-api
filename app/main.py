@@ -10,7 +10,7 @@ import psutil
 import uvicorn
 from typing import List, Dict
 import os
-
+from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
 from app.routers import searches           # ← this line was missing
 from app.routers import auth as auth_router  # ← keep this too
 from app.core.database import engine, Base, get_db
@@ -104,7 +104,7 @@ async def root():
 #   from app.models.seen_ad import SeenAd
 #   from app.models.user import User
 #   from app.models.token_transaction import TokenTransaction
- from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
+#   from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
 #
 # 2. After app = FastAPI(...), add:
 #
