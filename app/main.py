@@ -24,18 +24,19 @@ templates = Jinja2Templates(directory="templates")
 async def health():
     return {"status": "healthy"}
 
+from sqlalchemy import text
+
 @app.get("/dashboard", include_in_schema=False)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
-        result = await db.execute("SELECT * FROM searches")
+        result = await db.execute(text("SELECT * FROM searches"))
         searches_list = result.fetchall()
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "searches": searches_list
         })
     except Exception as e:
-        return {"error": str(e), "message": "Dashboard-Fehler – prüfe Logs"}
-
+        return {"error": str(e)}
 @app.on_event("startup")
 async def startup_event():
     # Tabellen erstellen (nur für Entwicklung)
