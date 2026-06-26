@@ -1,4 +1,3 @@
-from fastapi import FastAPI, Query
 from fastapi import FastAPI, Depends, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -7,8 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
 import psutil
+import uvicorn
+from typing import List, Dict
 
-from app.core.database import get_db
+from app.routers import searches           # ← this line was missing
+from app.routers import auth as auth_router  # ← keep this too
+from app.core.database import engine, Base, get_db
+from app.models import search, user, token_transaction, seen_ad
 from app.models.search import Search
 from app.models.seen_ad import SeenAd
 from app.models.user import User
