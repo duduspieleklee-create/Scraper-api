@@ -1,4 +1,5 @@
 import logging
+import psutil
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -6,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.routers import searches
-from app.core.database import engine, Base, get_db, AsyncSessionLocal
+from app.core.database import engine, Base, get_db
 from app.config import settings
 
 app = FastAPI(
@@ -32,34 +33,39 @@ async def health():
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
-        searches_list = []
-        for row in result:
-            searches_list.append({
-                "name": row.name,
-                "keyword": row.keyword,
-                "interval_minutes": row.interval_minutes,
-                "enabled": row.enabled,
-                "last_run": str(row.last_run) if row.last_run else "Nie"
-            })
+        searches_list = [dict(row._mapping) for row in result]
+        
+        # Server-Status
+        cpu = psutil.cpu_percent()
+        memory = psutil.virtual_memory().percent
+        disk = psutil.disk_usage('/').percent
+        active_searches = len([s for s in searches_list if s.get('enabled', False)])
+        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "searches": searches_list
+            "searches": searches_list,
+            "active_searches": active_searches,
+            "cpu": cpu,
+            "memory": memory,
+            "disk": disk,
+            "error": None
         })
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Dashboard Error: {e}")
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "searches": [],
+            "active_searches": 0,
+            "cpu": 0,
+            "memory": 0,
+            "disk": 0,
+            "error": str(e)
+        })
 
 @app.on_event("startup")
 async def startup_event():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
-    async with AsyncSessionLocal() as db:
-        # Default Data
-        result = await db.execute(text("SELECT COUNT(*) FROM users"))
-        if result.scalar() == 0:
-            await db.execute(text("INSERT INTO users (id, balance) VALUES ('default-user', 20)"))
-            logger.info("Default User erstellt")
-
     logger.info("🚀 API gestartet - Dashboard unter /dashboard")
 
 if __name__ == "__main__":
