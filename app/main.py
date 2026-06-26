@@ -102,7 +102,8 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         active_proxies = await db.scalar(select(func.count(Proxy.id)).where(Proxy.status == "active")) or 0
         total_proxies = await db.scalar(select(func.count(Proxy.id))) or 0
         proxy_result = await db.execute(select(Proxy).order_by(Proxy.created_at.desc()))
-        proxy_list = proxy_result.scalars().all()
+        proxy_list = [{"id": p.id, "url": p.url, "status": p.status, "protocol": p.protocol, "country": p.country, "fail_count": p.fail_count} for p in proxy_result.scalars().all()]
+
 
         # Token spend: total + last 24h
         tokens_spent_raw = await db.scalar(select(func.sum(TokenTransaction.amount)).where(TokenTransaction.amount < 0))
@@ -112,8 +113,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         from sqlalchemy import case as sql_case
         wh_result = await db.execute(select(func.count(TokenTransaction.id).label("total"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_ok%"), 1), else_=0)).label("ok"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_fail%"), 1), else_=0)).label("fail")))
         wh_row = wh_result.first()
-        # Robustere Version
-        webhook_ok = 1 if getattr(wh_row, 'ok', None) in (True, 1, "1") else 0
+        webhook_ok = int(wh_row.ok or 0)
         webhook_fail = int(wh_row.fail or 0)
         from sqlalchemy import cast, Date as SQLDate
         ads_per_day_raw = await db.execute(select(cast(SeenAd.first_seen, SQLDate).label("day"), func.count(SeenAd.id).label("cnt")).where(SeenAd.first_seen >= now - timedelta(days=7)).group_by("day").order_by("day"))
