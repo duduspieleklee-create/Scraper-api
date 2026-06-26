@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Kleinanzeigen Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>🛒 Kleinanzeigen Notifier Dashboard</h1>
+    <p><a href="/api/v1/docs">API Docs (Swagger)</a></p>
+    
+    <h2>Aktive Suchen</h2>
+    <table border="1" cellpadding="8">
+        <tr>
+            <th>Name</th>
+            <th>Keyword</th>
+            <th>Interval</th>
+            <th>Status</th>
+            <th>Last Run</th>
+        </tr>
+        {% for search in searches %}
+        <tr>
+            <td>{{ search.name }}</td>
+            <td>{{ search.keyword }}</td>
+            <td>{{ search.interval_minutes }} min</td>
+            <td style="color: {% if search.enabled %}green{% else %}red{% endif %}">
+                {{ 'Aktiv' if search.enabled else 'Pausiert' }}
+            </td>
+            <td>{{ search.last_run or 'Noch nie' }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
