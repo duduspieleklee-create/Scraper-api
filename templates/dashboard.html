@@ -1,37 +1,460 @@
 <!DOCTYPE html>
-<html>
-<head><title>Dashboard</title></head>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kleinanzeigen Dashboard</title>
+  <meta http-equiv="refresh" content="30" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3250;
+      --accent: #4f6ef7;
+      --accent2: #7c3aed;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 99px;
+      background: rgba(34,197,94,0.15);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.25);
+    }
+    .badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .timestamp {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ── Grid helpers ── */
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 1100px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 800px)  { .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+    }
+    .card-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ── Server metric cards with gauge bar ── */
+    .metric-bar {
+      margin-top: 12px;
+      height: 6px;
+      border-radius: 99px;
+      background: var(--surface2);
+      overflow: hidden;
+    }
+    .metric-bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+    .bar-green  { background: var(--green); }
+    .bar-yellow { background: var(--yellow); }
+    .bar-red    { background: var(--red); }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin: 8px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Worker Jobs ── */
+    .worker-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .worker-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .worker-header h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+    .pill-blue   { background: rgba(79,110,247,0.15); color: var(--accent); }
+    .pill-green  { background: rgba(34,197,94,0.15);  color: var(--green); }
+    .pill-yellow { background: rgba(234,179,8,0.15);  color: var(--yellow); }
+    .pill-red    { background: rgba(239,68,68,0.15);  color: var(--red); }
+    .pill-gray   { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+    /* ── Table ── */
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead tr {
+      background: var(--surface2);
+    }
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .keyword { font-family: monospace; font-size: 0.8rem; color: var(--accent); }
+    .next-run { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Recent ads ── */
+    .ad-row td:first-child { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .price-tag {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--green);
+    }
+    .ad-link {
+      display: inline-block;
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-decoration: none;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .ad-link:hover { text-decoration: underline; }
+    .time-ago { font-size: 0.73rem; color: var(--muted); white-space: nowrap; }
+
+    /* ── Error ── */
+    .error-box {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      color: var(--red);
+      margin-bottom: 20px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 0.73rem;
+      color: var(--muted);
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
 <body>
-    <h1>🛒 Kleinanzeigen Dashboard</h1>
-    
-    {% if error %}
-    <p style="color:red;">Fehler: {{ error }}</p>
-    {% else %}
-    <h2>Server Status</h2>
-    <p>CPU: {{ cpu }}%</p>
-    <p>Memory: {{ memory }}%</p>
-    <p>Disk: {{ disk }}%</p>
-    <p>Aktive Suchen: <strong>{{ active_searches }}</strong></p>
-    
-    <h2>Suchen ({{ searches|length }})</h2>
-    <table border="1">
+
+<div class="header">
+  <h1>🛒 Kleinanzeigen Dashboard</h1>
+  <div class="header-meta">
+    <span class="badge">Online</span>
+    <span class="timestamp">Auto-refresh alle 30s &nbsp;·&nbsp; {{ now.strftime('%d.%m.%Y %H:%M:%S') }} UTC</span>
+  </div>
+</div>
+
+{% if error %}
+<div class="error-box">⚠️ Fehler: {{ error }}</div>
+{% else %}
+
+<!-- ── Server Resources ── -->
+<div class="section-label">Server Ressourcen</div>
+<div class="grid-3">
+  <div class="card">
+    <div class="card-title">CPU Auslastung</div>
+    <div class="card-value" style="color:{% if cpu > 80 %}var(--red){% elif cpu > 60 %}var(--yellow){% else %}var(--green){% endif %}">{{ cpu }}%</div>
+    <div class="metric-bar">
+      <div class="metric-bar-fill {% if cpu > 80 %}bar-red{% elif cpu > 60 %}bar-yellow{% else %}bar-green{% endif %}"
+           style="width: {{ cpu }}%"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Arbeitsspeicher</div>
+    <div class="card-value" style="color:{% if memory_percent > 85 %}var(--red){% elif memory_percent > 65 %}var(--yellow){% else %}var(--green){% endif %}">{{ memory_percent }}%</div>
+    <div class="card-sub">{{ memory_used_gb }} GB / {{ memory_total_gb }} GB</div>
+    <div class="metric-bar">
+      <div class="metric-bar-fill {% if memory_percent > 85 %}bar-red{% elif memory_percent > 65 %}bar-yellow{% else %}bar-green{% endif %}"
+           style="width: {{ memory_percent }}%"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Festplatte</div>
+    <div class="card-value" style="color:{% if disk_percent > 90 %}var(--red){% elif disk_percent > 75 %}var(--yellow){% else %}var(--green){% endif %}">{{ disk_percent }}%</div>
+    <div class="card-sub">{{ disk_used_gb }} GB / {{ disk_total_gb }} GB</div>
+    <div class="metric-bar">
+      <div class="metric-bar-fill {% if disk_percent > 90 %}bar-red{% elif disk_percent > 75 %}bar-yellow{% else %}bar-green{% endif %}"
+           style="width: {{ disk_percent }}%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Key Metrics ── -->
+<div class="section-label">Übersicht</div>
+<div class="grid-4">
+  <div class="card">
+    <div class="card-title">Gespeicherte Anzeigen</div>
+    <div class="card-value" style="color:var(--accent)">{{ total_ads }}</div>
+    <div class="card-sub">{{ ads_24h }} neu in letzten 24h</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Aktive Suchen</div>
+    <div class="card-value" style="color:var(--green)">{{ active_searches }}</div>
+    <div class="card-sub">{{ paused_searches }} pausiert · {{ total_searches }} gesamt</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Registrierte Nutzer</div>
+    <div class="card-value">{{ total_users }}</div>
+    <div class="card-sub">Gesamt</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Token verbraucht</div>
+    <div class="card-value" style="color:var(--yellow)">{{ tokens_spent }}</div>
+    <div class="card-sub">Über alle Nutzer</div>
+  </div>
+</div>
+
+<!-- ── Worker / Scheduled Jobs ── -->
+<div class="section-label">Worker & Scheduler</div>
+<div class="worker-card" style="margin-bottom:20px;">
+  <div class="worker-header">
+    <h3>Geplante Jobs</h3>
+    <span class="pill pill-blue">{{ active_searches }} aktive Jobs</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
         <tr>
-            <th>Name</th>
-            <th>Keyword</th>
-            <th>Interval</th>
-            <th>Status</th>
-            <th>Last Run</th>
+          <th>Suche</th>
+          <th>Keyword</th>
+          <th>Interval</th>
+          <th>Status</th>
+          <th>Letzter Lauf</th>
+          <th>Nächster Lauf (est.)</th>
+          <th>Ads gefunden</th>
         </tr>
-        {% for s in searches %}
+      </thead>
+      <tbody>
+        {% for search, ad_count in searches_with_counts %}
         <tr>
-            <td>{{ s.name }}</td>
-            <td>{{ s.keyword }}</td>
-            <td>{{ s.interval_minutes }} min</td>
-            <td>{{ 'Aktiv' if s.enabled else 'Pausiert' }}</td>
-            <td>{{ s.last_run or 'Nie' }}</td>
+          <td>{{ search.name }}</td>
+          <td><span class="keyword">{{ search.keyword }}</span>
+            {% if search.location %}<span class="card-sub"> · {{ search.location }}</span>{% endif %}
+          </td>
+          <td>{{ search.interval_minutes }} min</td>
+          <td>
+            {% if search.enabled %}
+              <span class="pill pill-green">Aktiv</span>
+            {% else %}
+              <span class="pill pill-gray">Pausiert</span>
+            {% endif %}
+          </td>
+          <td class="time-ago">
+            {% if search.last_run %}
+              {{ search.last_run.strftime('%d.%m %H:%M') }}
+            {% else %}
+              <span style="color:var(--muted)">Nie</span>
+            {% endif %}
+          </td>
+          <td class="next-run">
+            {% if search.enabled and search.last_run %}
+              {% set next_run = search.last_run + timedelta(minutes=search.interval_minutes) %}
+              {% if next_run < now %}
+                <span style="color:var(--yellow)">Überfällig</span>
+              {% else %}
+                {{ next_run.strftime('%d.%m %H:%M') }}
+              {% endif %}
+            {% elif search.enabled %}
+              <span style="color:var(--accent)">Beim nächsten Zyklus</span>
+            {% else %}
+              <span style="color:var(--muted)">—</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:600;color:var(--accent)">{{ ad_count }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">
+            Keine Suchen vorhanden. Erstelle eine Suche via <code>/searches</code>.
+          </td>
         </tr>
         {% endfor %}
+      </tbody>
     </table>
-    {% endif %}
+  </div>
+</div>
+
+<!-- ── Recent Ads ── -->
+<div class="section-label">Zuletzt gefundene Anzeigen</div>
+<div class="worker-card" style="margin-bottom:20px;">
+  <div class="worker-header">
+    <h3>Letzte Anzeigen</h3>
+    <span class="pill pill-blue">{{ total_ads }} gesamt</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Titel</th>
+          <th>Preis</th>
+          <th>Link</th>
+          <th>Gefunden am</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ad in recent_ads %}
+        <tr class="ad-row">
+          <td title="{{ ad.title }}">{{ ad.title or '—' }}</td>
+          <td>
+            {% if ad.price %}
+              <span class="price-tag">{{ ad.price }} €</span>
+            {% else %}
+              <span style="color:var(--muted)">k.A.</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if ad.link %}
+              <a class="ad-link" href="{{ ad.link }}" target="_blank" rel="noopener"
+                 title="{{ ad.link }}">{{ ad.link }}</a>
+            {% else %}
+              <span style="color:var(--muted)">—</span>
+            {% endif %}
+          </td>
+          <td class="time-ago">{{ ad.first_seen.strftime('%d.%m %H:%M') }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" style="text-align:center;color:var(--muted);padding:32px;">
+            Noch keine Anzeigen gespeichert.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}
+
+<div class="footer">
+  <a href="/docs">API Docs</a> &nbsp;·&nbsp;
+  <a href="/health">Health Check</a> &nbsp;·&nbsp;
+  <a href="/redoc">ReDoc</a>
+</div>
+
 </body>
 </html>
