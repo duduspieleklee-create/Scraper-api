@@ -4,7 +4,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.config import settings
+from app.core.database import get_db
 
 security = HTTPBearer()
 
@@ -47,3 +50,32 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> TokenData:
     return decode_token(credentials.credentials)
+
+
+async def get_current_active_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> TokenData:
+    """
+    Validates JWT and verifies user still exists in database.
+    Prevents deleted users from using stale JWTs for up to 7 days.
+    """
+    token_data = decode_token(credentials.credentials)
+    
+    # Import here to avoid circular imports
+    from app.models.user import User
+    
+    # Check if user still exists in database
+    result = await db.execute(
+        select(User).where(User.id == token_data.user_id)
+    )
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Benutzer nicht found oder gelöscht",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return token_data
