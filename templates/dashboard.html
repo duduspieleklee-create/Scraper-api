@@ -3,11 +3,16 @@
 <head><title>Dashboard</title></head>
 <body>
     <h1>Kleinanzeigen Dashboard</h1>
+    
+    {% if error %}
+    <p style="color:red;">Fehler: {{ error }}</p>
+    {% else %}
     <p>Anzahl Suchen: {{ searches|length }}</p>
     <ul>
         {% for search in searches %}
-        <li>{{ search.name }} - {{ search.keyword }} ({{ search.interval_minutes }} min) - {{ 'Aktiv' if search.enabled else 'Pausiert' }}</li>
+        <li>{{ search.name }} - {{ search.keyword }} ({{ search.interval_minutes }} min)</li>
         {% endfor %}
     </ul>
+    {% endif %}
 </body>
 </html>
