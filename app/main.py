@@ -146,9 +146,9 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         recent_ads = recent_ads_result.scalars().all()
 
         return templates.TemplateResponse(
-            "dashboard.html",
+            
+            request=request, name="dashboard.html", context=
             {
-                "request": request,
                 # server
                 "cpu": cpu,
                 "memory_percent": memory_percent,
