@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
 
 from app.routers import searches
 from app.core.database import engine, Base, get_db
@@ -24,22 +25,20 @@ templates = Jinja2Templates(directory="templates")
 async def health():
     return {"status": "healthy"}
 
-from sqlalchemy import text
-
 @app.get("/dashboard", include_in_schema=False)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
-        searches_list = result.fetchall()
+        searches_list = [dict(row._mapping) for row in result]
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "searches": searches_list
         })
     except Exception as e:
         return {"error": str(e)}
+
 @app.on_event("startup")
 async def startup_event():
-    # Tabellen erstellen (nur für Entwicklung)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     print("🚀 API gestartet - Dashboard unter /dashboard")
