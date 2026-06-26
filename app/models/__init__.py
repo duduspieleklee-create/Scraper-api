@@ -1,2 +1,3 @@
 ZnJvbSBhcHAubW9kZWxzIGltcG9ydCB3b3JrZXJfaGVhcnRiZWF0LCBzZWFy
 Y2hfZXhlY3V0aW9uX2xvZywgcHJveHkK
+from app.models import worker_heartbeat, search_execution_log, proxy

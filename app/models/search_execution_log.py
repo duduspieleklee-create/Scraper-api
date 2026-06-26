@@ -1,11 +1,11 @@
-ZnJvbSBzcWxhbGNoZW15IGltcG9ydCBDb2x1bW4sIEludGVnZXIsIFN0cmlu
-ZywgRGF0ZVRpbWUKZnJvbSBzcWxhbGNoZW15LnNxbCBpbXBvcnQgZnVuYwpm
-cm9tIGFwcC5jb3JlLmRhdGFiYXNlIGltcG9ydCBCYXNlCgoKY2xhc3MgU2Vh
-cmNoRXhlY3V0aW9uTG9nKEJhc2UpOgogICAgX190YWJsZW5hbWVfXyA9ICJz
-ZWFyY2hfZXhlY3V0aW9uX2xvZyIKCiAgICBpZCA9IENvbHVtbihJbnRlZ2Vy
-LCBwcmltYXJ5X2tleT1UcnVlLCBpbmRleD1UcnVlKQogICAgdXNlcl9pZCA9
-IENvbHVtbihTdHJpbmcsIGluZGV4PVRydWUsIG51bGxhYmxlPUZhbHNlKQog
-ICAgc2VhcmNoX2lkID0gQ29sdW1uKEludGVnZXIsIG51bGxhYmxlPUZhbHNl
-LCBpbmRleD1UcnVlKQogICAgZXhlY3V0ZWRfYXQgPSBDb2x1bW4oRGF0ZVRp
-bWUodGltZXpvbmU9VHJ1ZSksIHNlcnZlcl9kZWZhdWx0PWZ1bmMubm93KCks
-IGluZGV4PVRydWUpCg==
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.sql import func
+from app.core.database import Base
+
+class SearchExecutionLog(Base):
+    __tablename__ = "search_execution_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String, nullable=False)
+    search_id = Column(Integer, ForeignKey("searches.id"), nullable=False)
+    executed_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)

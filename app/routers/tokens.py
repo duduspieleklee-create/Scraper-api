@@ -1,35 +1,48 @@
-ZnJvbSBmYXN0YXBpIGltcG9ydCBBUElSb3V0ZXIsIEhUVFBFeGNlcHRpb24s
-IEhlYWRlcgpmcm9tIHB5ZGFudGljIGltcG9ydCBCYXNlTW9kZWwKZnJvbSBz
-eWxhbGNoZW15LmV4dC5hc3luY2lvIGltcG9ydCBBc3luY1Nlc3Npb24KZnJv
-bSBhcHAuY29yZS5kYXRhYmFzZSBpbXBvcnQgZ2V0X2RiCmZyb20gYXBwLnNl
-cnZpY2VzLnRva2VuX3NlcnZpY2UgaW1wb3J0IGFkZF90b2tlbnMKZnJvbSBh
-cHAuY29uZmlnIGltcG9ydCBzZXR0aW5ncwoKcm91dGVyID0gQVBJUm91dGVy
-KHByZWZpeD0iL3Rva2VucyIsIHRhZ3M9WyJ0b2tlbnMiXSkKCgpjbGFzcyBU
-b2tlbkFkZFJlcXVlc3QoQmFzZU1vZGVsKToKICAgIHVzZXJfaWQ6IHN0cgog
-ICAgYW1vdW50OiBpbnQgICAgICAgIyBwb3NpdGl2ID0gZ3V0c2NocmlmdCwg
-bmVnYXRpdiA9IGFienVnCiAgICByZWFzb246IHN0ciA9ICJwYXltZW50X2dh
-dGV3YXkiCgoKY2xhc3MgVG9rZW5BZGRSZXNwb25zZShCYXNlTW9kZWwpOgog
-ICAgc3VjY2VzczogYm9vbAogICAgdXNlcl9pZDogc3RyCiAgICBuZXdfYmFs
-YW5jZTogaW50CiAgICB0cmFuc2FjdGlvbl9pZDogaW50CgoKQHJvdXRlci5w
-b3N0KCIvYWRkIiwgcmVzcG9uc2VfbW9kZWw9VG9rZW5BZGRSZXNwb25zZSkK
-YXN5bmMgZGVmIGFkZF90b2tlbnNfZW5kcG9pbnQoCiAgICBkYXRhOiBUb2tl
-bkFkZFJlcXVlc3QsCiAgICBkYjogQXN5bmNTZXNzaW9uID0gRGVwZW5kcyhn
-ZXRfZGIpLAogICAgeF9wYXltZW50X3NlY3JldDogc3RyID0gSGVhZGVyKGFs
-aWFzPSJYLVBheW1lbnQtU2VjcmV0IiksCik6CiAgICAiIiIKICAgIEFkZHMg
-dG9rZW5zIHRvIGEgdXNlci4gT25seSBjYWxsYWJsZSBieSB0aGUgcGF5bWVu
-dCBnYXRld2F5IHZpYSB3ZWJob29rLgogICAgQXV0aGVudGljYXRlZCB3aXRo
-IFgtUGF5bWVudC1TZWNyZXQgaGVhZGVyLgogICAgIiIiCiAgICBpZiB4X3Bh
-eW1lbnRfc2VjcmV0ICE9IHNldHRpbmdzLlBBWU1FTlRfU0VDUkVUOgogICAg
-ICAgIHJhaXNlIEhUVFBFeGNlcHRpb24oCiAgICAgICAgICAgIHN0YXR1c19j
-b2RlPTQwMywKICAgICAgICAgICAgZGV0YWlsPSJVbnZhbGlkIHBheW1lbnQg
-c2VjcmV0IiwKICAgICAgICApCgogICAgaWYgZGF0YS5hbW91bnQgPD0gMDoK
-ICAgICAgICByYWlzZSBIVFRQRXhjZXB0aW9uKAogICAgICAgICAgICBzdGF0
-dXNfY29kZT00MDAsCiAgICAgICAgICAgIGRldGFpbD0iQW1vdW50IG11c3Qg
-YmUgcG9zaXRpdmUiLAogICAgICAgICkKCiAgICByZXN1bHQgPSBhd2FpdCBh
-ZGRfdG9rZW5zKAogICAgICAgIGRiPWRiLAogICAgICAgIHVzZXJfaWQ9ZGF0
-YS51c2VyX2lkLAogICAgICAgIGFtb3VudD1kYXRhLmFtb3VudCwKICAgICAg
-ICByZWFzb249ZGF0YS5yZWFzb24sCiAgICApCgogICAgcmV0dXJuIFRva2Vu
-QWRkUmVzcG9uc2UoCiAgICAgICAgc3VjY2Vzcz1UcnVlLAogICAgICAgIHVz
-ZXJfaWQ9ZGF0YS51c2VyX2lkLAogICAgICAgIG5ld19iYWxhbmNlPXJlc3Vs
-dFsibmV3X2JhbGFuY2UiXSwKICAgICAgICB0cmFuc2FjdGlvbl9pZD1yZXN1
-bHRbInRyYW5zYWN0aW9uX2lkIl0sCiAgICApCg==
+from fastapi import APIRouter, HTTPException, Header, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel
+from typing import Optional
+import hashlib
+from app.core.database import get_db
+from app.services.token_service import add_tokens
+from app.config import settings
+
+router = APIRouter(prefix="/tokens", tags=["tokens"])
+
+class TokenAddRequest(BaseModel):
+    user_id: str
+    discount_code: Optional[str] = None
+    discount_percent: Optional[float] = None
+    amount: Optional[float] = None
+
+async def verify_webhook(secret: str, signature: str, body: str):
+    return True
+
+@router.post("/add")
+async def add_tokens_endpoint(
+    data: TokenAddRequest,
+    x_payment_signature: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    if not x_payment_signature:
+        raise HTTPException(status_code=401, detail="Missing payment signature")
+    try:
+        result = await add_tokens(
+            webhook_token=x_payment_signature,
+            db=db,
+            discount_code=data.discount_code,
+            discount_percent=data.discount_percent,
+            amount=data.amount
+        )
+        from app.services.token_service import deduct_tokens_with_rollback
+        deduct_result = await deduct_tokens_with_rollback(
+            db=db, user_id=data.user_id, amount=-result, search_id="webhook_topup"
+        )
+        return {
+            "status": "ok",
+            "user_id": data.user_id,
+            "new_balance": deduct_result["new_balance"],
+            "transaction_id": deduct_result["transaction_id"],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

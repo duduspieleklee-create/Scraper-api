@@ -1,71 +1,42 @@
-ZnJvbSBzcWxhbGNoZW15LmV4dC5hc3luY2lvIGltcG9ydCBBc3luY1Nlc3Np
-b24KZnJvbSBzcWxhbGNoZW15IGltcG9ydCB1cGRhdGUsIHNlbGVjdApmcm9t
-IGFwcC5tb2RlbHMudXNlciBpbXBvcnQgVXNlciAgIyBGYWxscyBkdSBlaW4g
-VXNlci1Nb2RlbGwgaGFzdApmcm9tIGFwcC5tb2RlbHMudG9rZW5fdHJhbnNh
-Y3Rpb24gaW1wb3J0IFRva2VuVHJhbnNhY3Rpb24KaW1wb3J0IGxvZ2dpbmcK
-ZnJvbSBkYXRldGltZSBpbXBvcnQgZGF0ZXRpbWUKCmxvZ2dlciA9IGxvZ2dp
-bmcuZ2V0TG9nZ2VyKF9fbmFtZV9fKQoKYXN5bmMgZGVmIGdldF91c2VyX2Jh
-bGFuY2UoZGI6IEFzeW5jU2Vzc2lvbiwgdXNlcl9pZDogc3RyKSAtPiBpbnQ6
-CiAgICByZXN1bHQgPSBhd2FpdCBkYi5leGVjdXRlKAogICAgICAgIHNlbGVj
-dChVc2VyLmJhbGFuY2UpLndoZXJlKFVzZXIuaWQgPT0gdXNlcl9pZCkKICAg
-ICkKICAgIGJhbGFuY2UgPSByZXN1bHQuc2NhbGFyX29uZV9vcl9ub25lKCkK
-ICAgIHJldHVybiBiYWxhbmNlIG9yIDAKCgphc3luYyBkZWYgZGVkdWN0X3Rv
-a2Vuc193aXRoX3JvbGxiYWNrKAogICAgZGI6IEFzeW5jU2Vzc2lvbiwKICAg
-IHVzZXJfaWQ6IHN0ciwKICAgIGFtb3VudDogaW50LAogICAgc2VhcmNoX2lk
-OiBzdHIsCiAgICByZWFzb246IHN0ciA9ICJzY3JhcGVfdHJpZ2dlciIKKSAt
-PiBkaWN0OgogICAgIiIiVG9rZW4gYWJidWNoZW4gbWl0IFRyYW5zYWt0aW9u
-IiIiCiAgICBpZiBhbW91bnQgPD0gMDoKICAgICAgICByZXR1cm4geyJzdWNj
-ZXNzIjogVHJ1ZSwgInRyYW5zYWN0aW9uX2lkIjogTm9uZX0KCiAgICBjdXJy
-ZW50X2JhbGFuY2UgPSBhd2FpdCBnZXRfdXNlcl9iYWxhbmNlKGRiLCB1c2Vy
-X2lkKQoKICAgIGlmIGN1cnJlbnRfYmFsYW5jZSA8IGFtb3VudDoKICAgICAg
-ICBsb2dnZXIud2FybmluZyhmIlVzZXIge3VzZXJfaWR9IGhhdCBuaWNodCBn
-ZW51ZyBUb2tlbnMgKHtjdXJyZW50X2JhbGFuY2V9IDwge2Ftb3VudH0pIikK
-ICAgICAgICByZXR1cm4geyJzdWNjZXNzIjogRmFsc2UsICJyZWFzb24iOiAi
-aW5zdWZmaWNpZW50X2Z1bmRzIn0KCiAgICAjIEFiYnVjaHVuZwogICAgYXdh
-aXQgZGIuZXhlY3V0ZSgKICAgICAgICB1cGRhdGUoVXNlcikKICAgICAgICAu
-d2hlcmUoVXNlci5pZCA9PSB1c2VyX2lkKQogICAgICAgIC52YWx1ZXMoYmFs
-YW5jZT1Vc2VyLmJhbGFuY2UgLSBhbW91bnQpCiAgICApCgogICAgdHJhbnNh
-Y3Rpb24gPSBUb2tlblRyYW5zYWN0aW9uKAogICAgICAgIHVzZXJfaWQ9dXNl
-cl9pZCwKICAgICAgICBzZWFyY2hfaWQ9c2VhcmNoX2lkLAogICAgICAgIGFt
-b3VudD0tYW1vdW50LAogICAgICAgIHJlYXNvbj1yZWFzb24sCiAgICAgICAg
-Y3JlYXRlZF9hdD1kYXRldGltZS51dGNub3coKQogICAgKQogICAgZGIuYWRk
-KHRyYW5zYWN0aW9uKQogICAgYXdhaXQgZGIuZmx1c2goKQoKICAgIGF3YWl0
-IGRiLmNvbW1pdCgpCgogICAgbG9nZ2VyLmluZm8oZiJ7YW1vdW50fSBUb2tl
-bnMgdm9uIFVzZXIge3VzZXJfaWR9IGFiZ2VidWNodCAoU3VjaGUge3NlYXJj
-aF9pZH0pIikKICAgIHJldHVybiB7InN1Y2Nlc3MiOiBUcnVlLCAidHJhbnNh
-Y3Rpb25faWQiOiB0cmFuc2FjdGlvbi5pZH0KCgphc3luYyBkZWYgcmVmdW5k
-X3Rva2VucygKICAgIGRiOiBBc3luY1Nlc3Npb24sCiAgICB1c2VyX2lkOiBz
-dHIsCiAgICBhbW91bnQ6IGludCwKICAgIHNlYXJjaF9pZDogc3RyLAogICAg
-cmVhc29uOiBzdHIgPSAic2NyYXBlX2Vycm9yIgopOgogICAgIiIiUsO8Y2tl
-cnN0YXR0dW5nIGJlaSBGZWhsZXJuIiIiCiAgICBhd2FpdCBkYi5leGVjdXRl
-KAogICAgICAgIHVwZGF0ZShVc2VyKQogICAgICAgIC53aGVyZShVc2VyLmlk
-ID09IHVzZXJfaWQpCiAgICAgICAgLnZhbHVlcyhiYWxhbmNlPVVzZXIuYmFs
-YW5jZSArIGFtb3VudCkKICAgICkKCiAgICB0cmFuc2FjdGlvbiA9IFRva2Vu
-VHJhbnNhY3Rpb24oCiAgICAgICAgdXNlcl9pZD11c2VyX2lkLAogICAgICAg
-IHNlYXJjaF9pZD1zZWFyY2hfaWQsCiAgICAgICAgYW1vdW50PSthbW91bnQs
-CiAgICAgICAgcmVhc29uPWYicmVmdW5kX3tyZWFzb259IiwKICAgICAgICBj
-cmVhdGVkX2F0PWRhdGV0aW1lLnV0Y25vdygpCiAgICApCiAgICBkYi5hZGQo
-dHJhbnNhY3Rpb24pCgogICAgYXdhaXQgZGIuY29tbWl0KCkKICAgIGxvZ2dl
-ci5pbmZvKGYie2Ftb3VudH0gVG9rZW5zIGFuIFVzZXIge3VzZXJfaWR9IHp1
-csO8Y2tlcnN0YXR0ZXQgKEdydW5kOiB7cmVhc29ufSkiKQoKCmFzeW5jIGRl
-ZiBhZGRfdG9rZW5zKAogICAgZGI6IEFzeW5jU2Vzc2lvbiwKICAgIHVzZXJf
-aWQ6IHN0ciwKICAgIGFtb3VudDogaW50LAogICAgcmVhc29uOiBzdHIgPSAi
-cGF5bWVudF9nYXRld2F5IiwKKSA9IGRpY3Q6CiAgICAiIiJHdXRzY2hyaWZ0
-IGR1cmNoIFBheW1lbnQtR2F0ZXdheSAoZS5nLiBTdHJpcGUsIFBheVBhbCkK
-ICAgIFRoaXMgY2FuIGFsc28gYmUgdXNlZCBmb3IgcmVmdW5kcyAocGFzcyBu
-ZWdhdGl2ZSBhbW91bnQpIG9yIGFkbWluIHRvcC11cHMuCiAgICAiIiIKICAg
-IGF3YWl0IGRiLmV4ZWN1dGUoCiAgICAgICAgdXBkYXRlKFVzZXIpCiAgICAg
-ICAgLndoZXJlKFVzZXIuaWQgPT0gdXNlcl9pZCkKICAgICAgICAudmFsdWVz
-KGJhbGFuY2U9VXNlci5iYWxhbmNlICsgYW1vdW50KQogICAgKQoKICAgIHRy
-YW5zYWN0aW9uID0gVG9rZW5UcmFuc2FjdGlvbigKICAgICAgICB1c2VyX2lk
-PXVzZXJfaWQsCiAgICAgICAgYW1vdW50PSthbW91bnQsCiAgICAgICAgcmVh
-c29uPXJlYXNvbiwKICAgICAgICBjcmVhdGVkX2F0PWRhdGV0aW1lLnV0Y25v
-dygpCiAgICApCiAgICBkYi5hZGQodHJhbnNhY3Rpb24pCiAgICBhd2FpdCBk
-Yi5mbHVzaCgpCgogICAgYXdhaXQgZGIuY29tbWl0KCkKCiAgICAjIEdldCBu
-ZXcgYmFsYW5jZQogICAgbmV3X2JhbGFuY2UgPSBhd2FpdCBnZXRfdXNlcl9i
-YWxhbmNlKGRiLCB1c2VyX2lkKQoKICAgIGxvZ2dlci5pbmZvKGYie2Ftb3Vu
-dH0gVG9rZW5zIGFuIFVzZXIge3VzZXJfaWR9IGd1dGdlc2NocmllYmVuIChH
-cnVuZDoge3JlYXNvbn0sIE5ldWVyIFN0YW5kOiB7bmV3X2JhbGFuY2V9KSIp
-CiAgICByZXR1cm4geyJzdWNjZXNzIjogVHJ1ZSwgInRyYW5zYWN0aW9uX2lk
-IjogdHJhbnNhY3Rpb24uaWQsICJuZXdfYmFsYW5jZSI6IG5ld19iYWxhbmNl
-fQo=
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+from sqlalchemy.sql import func
+from datetime import datetime
+from app.models.user import User
+from app.models.token_transaction import TokenTransaction
+import logging
+logger = logging.getLogger(__name__)
+
+async def deduct_tokens_with_rollback(db, user_id, amount, search_id=""):
+    user_result = await db.execute(select(User).where(User.id == user_id).limit(1))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        return {"success": False, "error": "User not found"}
+    if user.token_balance < amount:
+        return {"success": False, "error": "Insufficient tokens"}
+    await db.execute(update(User).where(User.id == user_id).values(
+        token_balance=User.token_balance - amount, updated_at=func.now()))
+    transaction = TokenTransaction(user_id=user_id, amount=-abs(int(amount)), reason=f'search:{search_id}')
+    db.add(transaction)
+    await db.commit()
+    return {"success": True, "new_balance": user.token_balance - amount, "transaction_id": transaction.id}
+
+async def refund_tokens(db, user_id, amount, reason=""):
+    user_result = await db.execute(select(User).where(User.id == user_id).limit(1))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        return {"success": False, "error": "User not found"}
+    await db.execute(update(User).where(User.id == user_id).values(
+        token_balance=User.token_balance + abs(int(amount)), updated_at=func.now()))
+    transaction = TokenTransaction(user_id=user_id, amount=abs(int(amount)), reason=reason or "refund")
+    db.add(transaction)
+    await db.commit()
+    return {"success": True, "new_balance": user.token_balance + abs(int(amount)), "transaction_id": transaction.id}
+
+async def add_tokens(webhook_token: str, db: AsyncSession, discount_code=None, discount_percent=None, amount=None):
+    tokens = 20
+    if amount:
+        tokens = int(amount)
+    if discount_code and discount_percent:
+        tokens = int(tokens * (1 + discount_percent / 100))
+    return tokens
