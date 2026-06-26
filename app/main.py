@@ -1,4 +1,5 @@
 import logging
+import traceback
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -40,21 +41,20 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
             "error": None
         })
     except Exception as e:
-        logger.error(f"Dashboard Error: {e}")
+        error_trace = traceback.format_exc()
+        logger.error(f"Dashboard Error: {e}\n{error_trace}")
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "searches": [],
-            "error": f"Fehler beim Laden der Daten: {str(e)}"
+            "error": str(e),
+            "traceback": error_trace
         })
 
 @app.on_event("startup")
 async def startup_event():
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Datenbank-Tabellen initialisiert")
-    except Exception as e:
-        logger.error(f"Startup Error: {e}")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("API gestartet - Dashboard unter /dashboard")
 
 if __name__ == "__main__":
     import uvicorn
