@@ -13,6 +13,8 @@ import os
 from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
 from app.routers import searches           # ← this line was missing
 from app.routers import auth as auth_router  # ← keep this too
+from app.routers import proxies
+from app.routers.dashboard_proxy import router as dashboard_proxy_router
 from app.core.database import engine, Base, get_db
 from app.models import search, user, token_transaction, seen_ad
 from app.models.search import Search
@@ -53,9 +55,9 @@ async def root():
     return {"message": "Kleinanzeigen Notifier API", "docs": "/docs", "dashboard": "/dashboard"}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 # IMPROVED DASHBOARD ROUTE — copy these changes into app/main.py
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 #
 # 1. Add these imports at the top of app/main.py:
 #
@@ -82,11 +84,11 @@ async def root():
 #    templates.env.globals["timedelta"] = timedelta
 #
 # 3. Replace the existing /dashboard route with the one below.
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 # IMPROVED DASHBOARD ROUTE — copy these changes into app/main.py
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 #
 # 1. Add/update imports at the top of app/main.py:
 #
@@ -114,7 +116,7 @@ async def root():
 #
 # 3. Replace the /dashboard route with the one below.
 #    NOTE: uses the new Starlette TemplateResponse keyword-argument style.
-# ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────[...]
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
