@@ -1,3 +1,4 @@
+import logging
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -30,20 +31,14 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
         searches_list = [dict(row._mapping) for row in result]
-        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "searches": searches_list,
-            "error": None
+            "searches": searches_list
         })
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Dashboard Error: {e}")
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "searches": [],
-            "error": str(e)
-        })
+        return {"error": str(e)}
 
 @app.on_event("startup")
 async def startup_event():
