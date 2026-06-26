@@ -1,1 +1,1 @@
-from app.models import worker_heartbeat, search_execution_log, proxy, market_stats
+from app.models import worker_heartbeat, search_execution_log, proxy, market_stats, market_stats_snapshot
