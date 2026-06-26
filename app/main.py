@@ -114,7 +114,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         wh_row = wh_result.first()
         # Robustere Version
         webhook_ok = 1 if getattr(wh_row, 'ok', None) in (True, 1, "1") else 0
-        webhook_fail = int(wh_row.fail)
+        webhook_fail = int(wh_row.fail or 0)
         from sqlalchemy import cast, Date as SQLDate
         ads_per_day_raw = await db.execute(select(cast(SeenAd.first_seen, SQLDate).label("day"), func.count(SeenAd.id).label("cnt")).where(SeenAd.first_seen >= now - timedelta(days=7)).group_by("day").order_by("day"))
         day_map = {str(row.day): row.cnt for row in ads_per_day_raw}
