@@ -204,7 +204,6 @@
   </div>
 
 </div>
-
 <!-- ── Server Resources ── -->
 <div class="section-label">Server Ressourcen</div>
 <div class="grid-3">
@@ -249,6 +248,21 @@
     <div class="card-title">Token verbraucht (24h)</div>
     <div class="card-value" style="color:var(--yellow)">{{ tokens_24h }}</div>
     <div class="card-sub">{{ tokens_spent }} gesamt</div>
+  </div>
+</div>
+
+<!-- ── Proxy Status ── -->
+<div class="section-label">Proxy Status</div>
+<div class="grid-2">
+  <div class="card">
+    <div class="card-title">Aktive Proxies</div>
+    <div class="card-value" style="color:{% if active_proxies > 0 %}var(--green){% else %}var(--red){% endif %}">{{ active_proxies }}</div>
+    <div class="card-sub">{% if active_proxies > 0 %}Rotierende Proxies aktiv{% else %}Keine Proxies aktiv ─ Scraper nutzt Direktverbindung{% endif %}</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Proxies gesamt</div>
+    <div class="card-value" style="color:var(--accent)">{{ total_proxies }}</div>
+    <div class="card-sub">{{ active_proxies }} aktiv · {{ total_proxies - active_proxies }} inaktiv</div>
   </div>
 </div>
 
@@ -410,4 +424,4 @@
   <a href="/docs">API Docs</a> &nbsp;·&nbsp; <a href="/health">Health Check</a> &nbsp;·&nbsp; <a href="/redoc">ReDoc</a>
 </div>
 </body>
-                                                                          </html>
+                                                                         </html>
