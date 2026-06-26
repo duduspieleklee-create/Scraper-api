@@ -1,5 +1,4 @@
 import logging
-import traceback
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -7,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
 from app.routers import searches
-from app.core.database import engine, Base, get_db
+from app.core.database import engine, Base, get_db, AsyncSessionLocal  # <-- WICHTIG: hinzufügen
 from app.config import settings
 
 app = FastAPI(
@@ -23,34 +22,6 @@ app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-logger = logging.getLogger(__name__)
-
-
-@app.on_event("startup")
-async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    async with AsyncSessionLocal() as db:
-        # Default User (falls nicht vorhanden)
-        result = await db.execute(text("SELECT COUNT(*) FROM users"))
-        if result.scalar() == 0:
-            await db.execute(text("""
-                INSERT INTO users (id, email, balance) 
-                VALUES ('default-user', 'default@example.com', 20)
-            """))
-            logger.info("Default User erstellt mit 20 Tokens")
-
-        # Default Suche (Beispiel)
-        result = await db.execute(text("SELECT COUNT(*) FROM searches"))
-        if result.scalar() == 0:
-            await db.execute(text("""
-                INSERT INTO searches (user_id, name, keyword, interval_minutes, enabled)
-                VALUES ('default-user', 'Test iPhone', 'iPhone', 15, true)
-            """))
-            logger.info("Default Suche erstellt")
-
-    logger.info("API gestartet mit Default Data - Dashboard unter /dashboard")
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
@@ -60,27 +31,28 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
         searches_list = [dict(row._mapping) for row in result]
-        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "searches": searches_list,
-            "error": None
+            "searches": searches_list
         })
     except Exception as e:
-        error_trace = traceback.format_exc()
-        logger.error(f"Dashboard Error: {e}\n{error_trace}")
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "searches": [],
-            "error": str(e),
-            "traceback": error_trace
-        })
+        logger = logging.getLogger(__name__)
+        logger.error(f"Dashboard Error: {e}")
+        return {"error": str(e)}
 
 @app.on_event("startup")
 async def startup_event():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    logger.info("API gestartet - Dashboard unter /dashboard")
+    
+    async with AsyncSessionLocal() as db:  # <-- Jetzt definiert
+        # Default Data
+        result = await db.execute(text("SELECT COUNT(*) FROM users"))
+        if result.scalar() == 0:
+            await db.execute(text("INSERT INTO users (id, balance) VALUES ('default-user', 20)"))
+            logger.info("Default User erstellt")
+
+    logger.info("🚀 API gestartet - Dashboard unter /dashboard")
 
 if __name__ == "__main__":
     import uvicorn
