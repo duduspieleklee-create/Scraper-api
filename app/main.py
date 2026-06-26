@@ -1,3 +1,66 @@
+# app/main.py
+from fastapi import FastAPI, Depends, Request, Query
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
+import psutil
+import uvicorn
+from typing import List, Dict
+import os
+
+from app.core.database import engine, Base, get_db
+from app.models.worker_heartbeat import WorkerHeartbeat
+from app.models import search, user, token_transaction, seen_ad, proxy
+from app.models.search import Search
+from app.models.seen_ad import SeenAd
+from app.models.user import User
+from app.models.token_transaction import TokenTransaction
+from app.models.proxy import Proxy
+
+from app.routers import searches
+from app.routers import auth as auth_router
+from app.routers import tokens
+from app.routers import proxies
+from app.routers.dashboard_proxy import router as dashboard_proxy_router
+
+app = FastAPI(
+    title="Kleinanzeigen Notifier API",
+    description="Automatische Benachrichtigungs-App fuer kleinanzeigen.de",
+    version="2.2.0"
+)
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+templates.env.globals["timedelta"] = timedelta
+
+app.include_router(searches.router)
+app.include_router(auth_router.router)
+app.include_router(tokens.router)
+app.include_router(proxies.router)
+app.include_router(dashboard_proxy_router)
+
+recent_scrapes: List[Dict] = []
+
+
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/")
+async def root():
+    return {"message": "Kleinanzeigen Notifier API", "docs": "/docs", "dashboard": "/dashboard"}
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
@@ -41,15 +104,11 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
 
         # Stats
         total_searches = await db.scalar(select(func.count(Search.id))) or 0
-        active_searches = (
-            await db.scalar(select(func.count(Search.id)).where(Search.enabled == True)) or 0
-        )
+        active_searches = await db.scalar(select(func.count(Search.id)).where(Search.enabled == True)) or 0
         paused_searches = total_searches - active_searches
         total_ads = await db.scalar(select(func.count(SeenAd.id))) or 0
         yesterday = now - timedelta(hours=24)
-        ads_24h = (
-            await db.scalar(select(func.count(SeenAd.id)).where(SeenAd.first_seen >= yesterday)) or 0
-        )
+        ads_24h = await db.scalar(select(func.count(SeenAd.id)).where(SeenAd.first_seen >= yesterday)) or 0
         total_users = await db.scalar(select(func.count(User.id))) or 0
 
         # Proxy stats
@@ -58,12 +117,8 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         proxy_result = await db.execute(select(Proxy).order_by(Proxy.created_at.desc()))
         proxy_list = [
             {
-                "id": p.id,
-                "url": p.url,
-                "status": p.status,
-                "protocol": p.protocol,
-                "country": p.country,
-                "fail_count": p.fail_count
+                "id": p.id, "url": p.url, "status": p.status,
+                "protocol": p.protocol, "country": p.country, "fail_count": p.fail_count
             }
             for p in proxy_result.scalars().all()
         ]
@@ -127,7 +182,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         price_avg = round(float(pr.av), 2) if pr.av is not None else None
         price_count = int(pr.cnt) if pr.cnt else 0
 
-        # All searches
+        # All searches with counts
         rows = await db.execute(
             select(Search, func.count(SeenAd.id).label("ad_count"))
             .outerjoin(SeenAd, Search.id == SeenAd.search_id)
@@ -247,3 +302,33 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 "now": datetime.utcnow()
             }
         )
+
+
+@app.get("/scrape")
+async def scrape(url: str = Query(..., description="URL zum Scrapen")):
+    if not url.startswith(("http://", "https://")):
+        return JSONResponse(status_code=400, content={"detail": "Ungueltige URL"})
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    try:
+        import httpx
+        from bs4 import BeautifulSoup
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url, headers=headers, follow_redirects=True)
+            resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "lxml")
+        title = soup.find("title")
+        title_text = title.get_text(strip=True) if title else "Kein Titel"
+        result = {
+            "url": url,
+            "title": title_text,
+            "status": resp.status_code,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        recent_scrapes.append({**result, "price": None})
+        return result
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"detail": str(e)})
+
+
+if __name__ == "__main__":
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
