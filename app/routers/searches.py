@@ -1,135 +1,107 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from pydantic import BaseModel
-from typing import Optional, List
-
-from app.core.database import get_db
-from app.core.auth import get_current_active_user, TokenData
-from app.models.search import Search
-
-router = APIRouter()
-
-
-class SearchCreate(BaseModel):
-    keyword: str
-    location: Optional[str] = None
-    price_min: Optional[int] = None
-    price_max: Optional[int] = None
-    category: Optional[str] = None
-    name: Optional[str] = None
-    interval_minutes: int = 15
-    callback_url: Optional[str] = None
-
-
-class SearchResponse(BaseModel):
-    id: int
-    name: str
-    keyword: str
-    location: Optional[str]
-    price_min: Optional[int]
-    price_max: Optional[int]
-    category: Optional[str]
-    interval_minutes: int
-    callback_url: Optional[str]
-    enabled: bool
-
-    class Config:
-        from_attributes = True
-
-
-@router.post("/searches", response_model=dict)
-async def create_search(
-    data: SearchCreate,
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    search = Search(
-        user_id=current_user.user_id,
-        name=data.name or data.keyword,
-        keyword=data.keyword,
-        location=data.location,
-        price_min=data.price_min,
-        price_max=data.price_max,
-        category=data.category,
-        interval_minutes=data.interval_minutes,
-        callback_url=data.callback_url,
-        enabled=True
-    )
-    db.add(search)
-    await db.commit()
-    await db.refresh(search)
-    return {"search_id": search.id, "name": search.name, "status": "created"}
-
-
-@router.get("/searches", response_model=List[SearchResponse])
-async def list_searches(
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(
-        select(Search).where(Search.user_id == current_user.user_id).order_by(Search.created_at.desc())
-    )
-    return result.scalars().all()
-
-
-@router.get("/searches/{search_id}", response_model=SearchResponse)
-async def get_search(
-    search_id: int,
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    search = await db.get(Search, search_id)
-    if not search:
-        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Kein Zugriff")
-    return search
-
-
-@router.post("/searches/{search_id}/pause")
-async def pause_search(
-    search_id: int,
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    search = await db.get(Search, search_id)
-    if not search:
-        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Kein Zugriff")
-    search.enabled = False
-    await db.commit()
-    return {"status": "paused"}
-
-
-@router.post("/searches/{search_id}/resume")
-async def resume_search(
-    search_id: int,
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    search = await db.get(Search, search_id)
-    if not search:
-        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Kein Zugriff")
-    search.enabled = True
-    await db.commit()
-    return {"status": "resumed"}
-
-
-@router.delete("/searches/{search_id}")
-async def delete_search(
-    search_id: int,
-    current_user: TokenData = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
-):
-    search = await db.get(Search, search_id)
-    if not search:
-        raise HTTPException(status_code=404, detail="Suche nicht gefunden")
-    if search.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Kein Zugriff")
-    await db.delete(search)
-    await db.commit()
-    return {"status": "deleted"}
+ZnJvbSBmYXN0YXBpIGltcG9ydCBBUElSb3V0ZXIsIERlcGVuZHMsIEhUVFBF
+eGNlcHRpb24KZnJvbSBzcWxhbGNoZW15LmV4dC5hc3luY2lvIGltcG9ydCBB
+c3luY1Nlc3Npb24KZnJvbSBzcWxhbGNoZW15IGltcG9ydCBzZWxlY3QKZnJv
+bSBweWRhbnRpYyBpbXBvcnQgQmFzZU1vZGVsLCBmaWVsZF92YWxpZGF0b3IK
+ZnJvbSB0eXBpbmcgaW1wb3J0IE9wdGlvbmFsLCBMaXN0Cgpmcm9tIGFwcC5j
+b3JlLmRhdGFiYXNlIGltcG9ydCBnZXRfZGIKZnJvbSBhcHAuY29yZS5hdXRo
+IGltcG9ydCBnZXRfY3VycmVudF9hY3RpdmVfdXNlciwgVG9rZW5EYXRhCmZy
+b20gYXBwLm1vZGVscy5zZWFyY2ggaW1wb3J0IFNlYXJjaApmcm9tIGFwcC5j
+b25maWcgaW1wb3J0IHNldHRpbmdzCgpyb3V0ZXIgPSBBUElSb3V0ZXIoKQoK
+IyBBbGxvd2VkIGludGVydmFscyB3aXRoIHRoZWlyIHByaWNpbmcKQUxMT1dF
+RF9JTlRFUlZBTF9NSU5VVEVTID0gc2V0KHNldHRpbmdzLklOVEVSVkFMX1BS
+SUNJTkcua2V5cygpKQoKCmNsYXNzIFNlYXJjaENyZWF0ZShCYXNlTW9kZWwp
+OgogICAga2V5d29yZDogc3RyCiAgICBsb2NhdGlvbjogT3B0aW9uYWxbc3Ry
+XSA9IE5vbmUKICAgIHByaWNlX21pbjogT3B0aW9uYWxbaW50XSA9IE5vbmUK
+ICAgIHByaWNlX21heDogT3B0aW9uYWxbaW50XSA9IE5vbmUKICAgIGNhdGVn
+b3J5OiBPcHRpb25hbFtzdHJdID0gTm9uZQogICAgbmFtZTogT3B0aW9uYWxb
+c3RyXSA9IE5vbmUKICAgIGludGVydmFsX21pbnV0ZXM6IGludCA9IDEKICAg
+IGNhbGxiYWNrX3VybDogT3B0aW9uYWxbc3RyXSA9IE5vbmUKCiAgICBAZmll
+bGRfdmFsaWRhdG9yKCJpbnRlcnZhbF9taW51dGVzIikKICAgIEBjbGFzc21l
+dGhvZAogICAgZGVmIHZhbGlkYXRlX2ludGVydmFsKGNscywgdjogaW50KSAt
+PiBpbnQ6CiAgICAgICAgaWYgdiBub3QgaW4gQUxMT1dFRF9JTlRFUlZBTF9N
+SU5VVEVTOgogICAgICAgICAgICBwcmljaW5nID0gc2V0dGluZ3MuSU5URVJW
+QUxfUFJJQ0lORwogICAgICAgICAgICBvcHRpb25zID0gIiwgIi5qb2luKAog
+ICAgICAgICAgICAgICAgZiJ7bX1tIOKGkiB7cCJHQF8iIH0iCiAgICAgICAg
+ICAgICAgICBmb3IgbSwgcCBpbiBzb3J0ZWQocHJpY2luZy5pdGVtcygpKQog
+ICAgICAgICAgICApCiAgICAgICAgICAgIHJhaXNlIFZhbHVlRXJyb3IoCiAg
+ICAgICAgICAgICAgICBmIlVuZ2FsdGlnZXMgSW50ZXJ2YWxsOiBAdiBNaW4u
+IEVybGF1YnQ6IHtvcHRpb25zfSIKICAgICAgICAgICAgKQogICAgICAgIHJl
+dHVybiB2CgoKY2xhc3MgU2VhcmNoUmVzcG9uc2UoQmFzZU1vZGVsKToKICAg
+IGlkOiBpbnQKICAgIG5hbWU6IHN0cgogICAga2V5d29yZDogc3RyCiAgICBs
+b2NhdGlvbjogT3B0aW9uYWxbc3RyXQogICAgcHJpY2VfbWluOiBPcHRpb25h
+bFtpbnRdCiAgICBwcmljZV9tYXg6IE9wdGlvbmFsW2ludF0KICAgIGNhdGVn
+b3J5OiBPcHRpb25hbFtzdHJdCiAgICBpbnRlcnZhbF9taW51dGVzOiBpbnQK
+ICAgIGNhbGxiYWNrX3VybDogT3B0aW9uYWxbc3RyXQogICAgZW5hYmxlZDog
+Ym9vbAoKICAgIGNsYXNzIENvbmZpZzoKICAgICAgICBmcm9tX2F0dHJpYnV0
+ZXMgPSBUcnVlCgoKQHJvdXRlci5wb3N0KCIvc2VhcmNoZXMiLCByZXNwb25z
+ZV9tb2RlbD1kaWN0KQphc3luYyBkZWYgY3JlYXRlX3NlYXJjaCgKICAgIGRh
+dGE6IFNlYXJjaENyZWF0ZSwKICAgIGN1cnJlbnRfdXNlcjogVG9rZW5EYXRh
+ID0gRGVwZW5kcyhnZXRfY3VycmVudF9hY3RpdmVfdXNlciksCiAgICBkYjog
+QXN5bmNTZXNzaW9uID0gRGVwZW5kcyhnZXRfZGIpCik6CiAgICBzZWFyY2gg
+PSBTZWFyY2goCiAgICAgICAgdXNlcl9pZD1jdXJyZW50X3VzZXIudXNlcl9p
+ZCwKICAgICAgICBuYW1lPWRhdGEubmFtZSBvciBkYXRhLmtleXdvcmQsCiAg
+ICAgICAga2V5d29yZD1kYXRhLmtleXdvcmQsCiAgICAgICAgbG9jYXRpb249
+ZGF0YS5sb2NhdGlvbiwKICAgICAgICBwcmljZV9taW49ZGF0YS5wcmljZV9t
+aW4sCiAgICAgICAgcHJpY2VfbWF4PWRhdGEucHJpY2VfbWF4LAogICAgICAg
+IGNhdGVnb3J5PWRhdGEuY2F0ZWdvcnksCiAgICAgICAgaW50ZXJ2YWxfbWlu
+dXRlcz1kYXRhLmludGVydmFsX21pbnV0ZXMsCiAgICAgICAgY2FsbGJhY2tf
+dXJsPWRhdGEuY2FsbGJhY2tfdXJsLAogICAgICAgIGVuYWJsZWQ9VHJ1ZQog
+ICAgKQogICAgZGIuYWRkKHNlYXJjaCkKICAgIGF3YWl0IGRiLmNvbW1pdCgp
+CiAgICBhd2FpdCBkYi5yZWZyZXNoKHNlYXJjaCkKICAgIHJldHVybiB7InNl
+YXJjaF9pZCI6IHNlYXJjaC5pZCwgIm5hbWUiOiBzZWFyY2gubmFtZSwgInN0
+YXR1cyI6ICJjcmVhdGVkIn0KCgpAcm91dGVyLmdldCgiL3NlYXJjaGVzIiwg
+cmVzcG9uc2VfbW9kZWw9TGlzdFtTZWFyY2hSZXNwb25zZV0pCmFzeW5jIGRl
+ZiBsaXN0X3NlYXJjaGVzKAogICAgY3VycmVudF91c2VyOiBUb2tlbkRhdGEg
+PSBEZXBlbmRzKGdldF9jdXJyZW50X2FjdGl2ZV91c2VyKSwKICAgIGRiOiBB
+c3luY1Nlc3Npb24gPSBEZXBlbmRzKGdldF9kYikKKToKICAgIHJlc3VsdCA9
+IGF3YWl0IGRiLmV4ZWN1dGUoCiAgICAgICAgc2VsZWN0KFNlYXJjaCkud2hl
+cmUoU2VhcmNoLnVzZXJfaWQgPT0gY3VycmVudF91c2VyLnVzZXJfaWQpLm9y
+ZGVyX2J5KFNlYXJjaC5jcmVhdGVkX2F0LmRlc2MoKSkKICAgICkKICAgIHJl
+dHVybiByZXN1bHQuc2NhbGFycygpLmFsbCgpCgoKQHJvdXRlci5nZXQoIi9z
+ZWFyY2hlcy97c2VhcmNoX2lkfSIsIHJlc3BvbnNlX21vZGVsPVNlYXJjaFJl
+c3BvbnNlKQphc3luYyBkZWYgZ2V0X3NlYXJjaCgKICAgIHNlYXJjaF9pZDog
+aW50LAogICAgY3VycmVudF91c2VyOiBUb2tlbkRhdGEgPSBEZXBlbmRzKGdl
+dF9jdXJyZW50X2FjdGl2ZV91c2VyKSwKICAgIGRiOiBBc3luY1Nlc3Npb24g
+PSBEZXBlbmRzKGdldF9kYikKKToKICAgIHNlYXJjaCA9IGF3YWl0IGRiLmdl
+dChTZWFyY2gsIHNlYXJjaF9pZCkKICAgIGlmIG5vdCBzZWFyY2g6CiAgICAg
+ICAgcmFpc2UgSFRUUEV4Y2VwdGlvbihzdGF0dXNfY29kZT00MDQsIGRldGFp
+bD0iU3VjaGUgbmljaHQgZ2VmdW5kZW4iKQogICAgaWYgc2VhcmNoLnVzZXJf
+aWQgIT0gY3VycmVudF91c2VyLnVzZXJfaWQ6CiAgICAgICAgcmFpc2UgSFRU
+UEV4Y2VwdGlvbihzdGF0dXNfY29kZT00MDMsIGRldGFpbD0iS2VpbiBadWdy
+aWZmIikKICAgIHJldHVybiBzZWFyY2gKCgpAcm91dGVyLnBvc3QoIi9zZWFy
+Y2hlcy97c2VhcmNoX2lkfS9wYXVzZSIpCmFzeW5jIGRlZiBwYXVzZV9zZWFy
+Y2goCiAgICBzZWFyY2hfaWQ6IGludCwKICAgIGN1cnJlbnRfdXNlcjogVG9r
+ZW5EYXRhID0gRGVwZW5kcyhnZXRfY3VycmVudF9hY3RpdmVfdXNlciksCiAg
+ICBkYjogQXN5bmNTZXNzaW9uID0gRGVwZW5kcyhnZXRfZGIpCik6CiAgICBz
+ZWFyY2ggPSBhd2FpdCBkYi5nZXQoU2VhcmNoLCBzZWFyY2hfaWQpCiAgICBp
+ZiBub3Qgc2VhcmNoOgogICAgICAgIHJhaXNlIEhUVFBFeGNlcHRpb24oc3Rh
+dHVzX2NvZGU9NDA0LCBkZXRhaWw9IlN1Y2hlIG5pY2h0IGdlZnVuZGVuIikK
+ICAgIGlmIHNlYXJjaC51c2VyX2lkICE9IGN1cnJlbnRfdXNlci51c2VyX2lk
+OgogICAgICAgIHJhaXNlIEhUVFBFeGNlcHRpb24oc3RhdHVzX2NvZGU9NDAz
+LCBkZXRhaWw9IktlaW4gWnVncmlmZiIpCiAgICBzZWFyY2guZW5hYmxlZCA9
+IEZhbHNlCiAgICBhd2FpdCBkYi5jb21taXQoKQogICAgcmV0dXJuIHsic3Rh
+dHVzIjogInBhdXNlZCJ9CgoKQHJvdXRlci5wb3N0KCIvc2VhcmNoZXMve3Nl
+YXJjaF9pZH0vcmVzdW1lIikKYXN5bmMgZGVmIHJlc3VtZV9zZWFyY2goCiAg
+ICBzZWFyY2hfaWQ6IGludCwKICAgIGN1cnJlbnRfdXNlcjogVG9rZW5EYXRh
+ID0gRGVwZW5kcyhnZXRfY3VycmVudF9hY3RpdmVfdXNlciksCiAgICBkYjog
+QXN5bmNTZXNzaW9uID0gRGVwZW5kcyhnZXRfZGIpCik6CiAgICBzZWFyY2gg
+PSBhd2FpdCBkYi5nZXQoU2VhcmNoLCBzZWFyY2hfaWQpCiAgICBpZiBub3Qg
+c2VhcmNoOgogICAgICAgIHJhaXNlIEhUVFBFeGNlcHRpb24oc3RhdHVzX2Nv
+ZGU9NDA0LCBkZXRhaWw9IlN1Y2hlIG5pY2h0IGdlZnVuZGVuIikKICAgIGlm
+IHNlYXJjaC51c2VyX2lkICE9IGN1cnJlbnRfdXNlci51c2VyX2lkOgogICAg
+ICAgIHJhaXNlIEhUVFBFeGNlcHRpb24oc3RhdHVzX2NvZGU9NDAzLCBkZXRh
+aWw9IktlaW4gWnVncmlmZiIpCiAgICBzZWFyY2guZW5hYmxlZCA9IFRydWUK
+ICAgIGF3YWl0IGRiLmNvbW1pdCgpCiAgICByZXR1cm4geyJzdGF0dXMiOiAi
+cmVzdW1lZCJ9CgoKQHJvdXRlci5kZWxldGUoIi9zZWFyY2hlcy97c2VhcmNo
+X2lkfSIpCmFzeW5jIGRlZiBkZWxldGVfc2VhcmNoKAogICAgc2VhcmNoX2lk
+OiBpbnQsCiAgICBjdXJyZW50X3VzZXI6IFRva2VuRGF0YSA9IERlcGVuZHMo
+Z2V0X2N1cnJlbnRfYWN0aXZlX3VzZXIpLAogICAgZGI6IEFzeW5jU2Vzc2lv
+biA9IERlcGVuZHMoZ2V0X2RiKQopOgogICAgc2VhcmNoID0gYXdhaXQgZGIu
+Z2V0KFNlYXJjaCwgc2VhcmNoX2lkKQogICAgaWYgbm90IHNlYXJjaDoKICAg
+ICAgICByYWlzZSBIVFRQRXhjZXB0aW9uKHN0YXR1c19jb2RlPTQwNCwgZGV0
+YWlsPSJTdWNoZSBuaWNodCBnZWZ1bmRlbiIpCiAgICBpZiBzZWFyY2gudXNl
+cl9pZCAhPSBjdXJyZW50X3VzZXIudXNlcl9pZDoKICAgICAgICByYWlzZSBI
+VFRQRXhjZXB0aW9uKHN0YXR1c19jb2RlPTQwMywgZGV0YWlsPSJLZWluIFp1
+Z3JpZmYiKQogICAgYXdhaXQgZGIuZGVsZXRlKHNlYXJjaCkKICAgIGF3YWl0
+IGRiLmNvbW1pdCgpCiAgICByZXR1cm4geyJzdGF0dXMiOiAiZGVsZXRlZCJ9
+Cg==
