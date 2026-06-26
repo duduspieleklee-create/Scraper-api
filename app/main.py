@@ -9,7 +9,6 @@ from app.routers import searches
 from app.core.database import engine, Base, get_db
 from app.config import settings
 
-# === FastAPI App zuerst definieren ===
 app = FastAPI(
     title="Kleinanzeigen Notifier API",
     description="API für automatisierte Kleinanzeigen-Suchen mit Token-System",
@@ -23,6 +22,8 @@ app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+logger = logging.getLogger(__name__)
+
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
@@ -32,20 +33,28 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
         searches_list = [dict(row._mapping) for row in result]
+        
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
-            "searches": searches_list
+            "searches": searches_list,
+            "error": None
         })
     except Exception as e:
-        logger = logging.getLogger(__name__)
         logger.error(f"Dashboard Error: {e}")
-        return {"error": str(e)}
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "searches": [],
+            "error": f"Fehler beim Laden der Daten: {str(e)}"
+        })
 
 @app.on_event("startup")
 async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("🚀 API gestartet - Dashboard unter /dashboard")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Datenbank-Tabellen initialisiert")
+    except Exception as e:
+        logger.error(f"Startup Error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
