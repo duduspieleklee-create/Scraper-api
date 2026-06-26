@@ -16,7 +16,6 @@ class ProxyCreateRequest(BaseModel):
     password: Optional[str] = None
     protocol: str = "http"
     country: Optional[str] = None
-
 class ProxyResponse(BaseModel):
     id: int
     url: str
@@ -68,6 +67,15 @@ async def delete_proxy(proxy_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"status": "deleted"}
 
+
+@router.patch("/{proxy_id}/toggle")
+async def toggle_proxy(proxy_id: int, db: AsyncSession = Depends(get_db)):
+    proxy = await db.get(Proxy, proxy_id)
+    if not proxy:
+        raise HTTPException(status_code=404, detail="Proxy not found")
+    proxy.status = "disabled" if proxy.status == "active" else "active"
+    await db.commit()
+    return {"status": proxy.status}
 
 @router.post("/{proxy_id}/test")
 async def test_proxy(proxy_id: int, db: AsyncSession = Depends(get_db)):
