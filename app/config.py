@@ -1,35 +1,30 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
-import secrets
-
-
-class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
-
-    DATABASE_URL: str
-
-    @property
-    def async_database_url(self) -> str:
-        url = self.DATABASE_URL
-        if url.startswith("postgresql://"):
-            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return url
-    POSTGRES_PASSWORD: Optional[str] = "postgres"
-
-    # JWT Auth
-    JWT_SECRET: str = secrets.token_hex(32)  # Fallback fuer Entwicklung, in Prod als Env setzen!
-
-    # Scraper-Einstellungen
-    REQUEST_DELAY_MIN: float = 1.5
-    REQUEST_DELAY_MAX: float = 4.0
-    REQUEST_TIMEOUT: int = 30
-
-    # Token-Settings
-    MIN_REQUIRED_BALANCE: int = 5
-
-
-settings = Settings()
+ZnJvbSBweWRhbnRpY19zZXR0aW5ncyBpbXBvcnQgQmFzZVNldHRpbmdzLCBT
+ZXR0aW5nc0NvbmZpZ0RpY3QKZnJvbSB0eXBpbmcgaW1wb3J0IE9wdGlvbmFs
+CmltcG9ydCBzZWNyZXRzCgoKY2xhc3MgU2V0dGluZ3MoQmFzZVNldHRpbmdz
+KToKICAgIG1vZGVsX2NvbmZpZyA9IFNldHRpbmdzQ29uZmlnRGljdCgKICAg
+ICAgICBlbnZfZmlsZT0iLmVudiIsCiAgICAgICAgZW52X2ZpbGVfZW5jb2Rp
+bmc9InV0Zi04IiwKICAgICAgICBleHRyYT0iaWdub3JlIgogICAgKQoKICAg
+IERBVEFCQVNFX1VSTDogc3RyCgogICAgQHByb3BlcnR5CiAgICBkZWYgYXN5
+bmNfZGF0YWJhc2VfdXJsKHNlbGYpIC0+IHN0cjoKICAgICAgICB1cmwgPSBz
+ZWxmLkRBVEFCQVNFX1VSTAogICAgICAgIGlmIHVybC5zdGFydHN3aXRoKCJw
+b3N0Z3Jlc3FsOi8vIik6CiAgICAgICAgICAgIHJldHVybiB1cmwucmVwbGFj
+ZSgicG9zdGdyZXNxbDovLyIsICJwb3N0Z3Jlc3FsK2FzeW5jcGc6Ly8iLCAx
+KQogICAgICAgIHJldHVybiB1cmwKCiAgICBQT1NUR1JFU19QQVNTV09SRDog
+T3B0aW9uYWxbc3RyXSA9ICJwb3N0Z3JlcyIKCiAgICAjIEpXVCBBdXRoCiAg
+ICBKV1RfU0VDUkVUOiBzdHIgPSBzZWNyZXRzLnRva2VuX2hleCgzMikgICMg
+RmFsbGJhY2sgZnVlciBFbnR3aWNrbHVuZywgaW4gUHJvZCBhbHMgRW52IHNl
+dHplbiEKCiAgICAjIFNjcmFwZXItRWluc3RlbGx1bmdlbgogICAgUkVRVUVT
+VF9ERUxBWV9NSU46IGZsb2F0ID0gMS41CiAgICBSRVFVRVNUX0RFTEFZX01B
+WDogZmxvYXQgPSA0LjAKICAgIFJFUVVFU1RfVElNRU9VVDogaW50ID0gMzAK
+CiAgICAjIFRva2VuLVNldHRpbmdzCiAgICBUSCBSSU5fUVVFSU9SRURfQkFM
+QU5DRTogaW50ID0gNQogICAgVE9LRU5fQ09TVF9QRVJfUlVOOiBpbnQgPSA1
+CiAgICBNQVhfRVhFQ1VUSU9OU19QRVJfTUlOVVRFOiBpbnQgPSA1CiAgICAK
+ICAgICMgUGF5bWVudCBHYXRld2F5IFdlYmhvb2sgU2VjcmV0CiAgICBQQU1F
+TlRfU0VDUkVUOiBzdHIgPSBzZWNyZXRzLnRva2VuX2hleCgzMikKICAgIAog
+ICAgIyBUb2tlbiBQcmljaW5nIGJ5IGludGVydmFsIChpbiBtaW51dGVzKQog
+ICAgQHByb3BlcnR5CiAgICBkZWYgSU5URVJWQUxfUFJJQ0lORyhzZWxmKSAt
+PiBkaWN0OgogICAgICAgIHJldHVybiB7CiAgICAgICAgICAgIDU6IDUsICAg
+ICMgNSBNaW5fZSA9IDUgVG9rZW5zCiAgICAgICAgICAgIDYwOiAyLCAgIyAx
+IFN0dW5mZSA9IDIgVG9rZW5zCiAgICAgICAgICAgIDE4MDogMSwgICMgMyBT
+dHVuZGVuID0gMSBUb2tlbgogICAgICAgIH0KCgpzZXR0aW5ncyA9IFNldHRp
+bmdzKCk=

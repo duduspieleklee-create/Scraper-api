@@ -1,82 +1,71 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import update, select
-from app.models.user import User  # Falls du ein User-Modell hast
-from app.models.token_transaction import TokenTransaction
-import logging
-from datetime import datetime
-
-logger = logging.getLogger(__name__)
-
-async def get_user_balance(db: AsyncSession, user_id: str) -> int:
-    result = await db.execute(
-        select(User.balance).where(User.id == user_id)
-    )
-    balance = result.scalar_one_or_none()
-    return balance or 0
-
-
-async def deduct_tokens_with_rollback(
-    db: AsyncSession,
-    user_id: str,
-    amount: int,
-    search_id: str,
-    reason: str = "scrape_trigger"
-) -> dict:
-    """Token abbuchen mit Transaktion"""
-    if amount <= 0:
-        return {"success": True, "transaction_id": None}
-
-    current_balance = await get_user_balance(db, user_id)
-
-    if current_balance < amount:
-        logger.warning(f"User {user_id} hat nicht genug Tokens ({current_balance} < {amount})")
-        return {"success": False, "reason": "insufficient_funds"}
-
-    # Abbuchung
-    await db.execute(
-        update(User)
-        .where(User.id == user_id)
-        .values(balance=User.balance - amount)
-    )
-
-    transaction = TokenTransaction(
-        user_id=user_id,
-        search_id=search_id,
-        amount=-amount,
-        reason=reason,
-        created_at=datetime.utcnow()
-    )
-    db.add(transaction)
-    await db.flush()
-
-    await db.commit()
-
-    logger.info(f"{amount} Tokens von User {user_id} abgebucht (Suche {search_id})")
-    return {"success": True, "transaction_id": transaction.id}
-
-
-async def refund_tokens(
-    db: AsyncSession,
-    user_id: str,
-    amount: int,
-    search_id: str,
-    reason: str = "scrape_error"
-):
-    """Rückerstattung bei Fehlern"""
-    await db.execute(
-        update(User)
-        .where(User.id == user_id)
-        .values(balance=User.balance + amount)
-    )
-
-    transaction = TokenTransaction(
-        user_id=user_id,
-        search_id=search_id,
-        amount=+amount,
-        reason=f"refund_{reason}",
-        created_at=datetime.utcnow()
-    )
-    db.add(transaction)
-
-    await db.commit()
-    logger.info(f"{amount} Tokens an User {user_id} zurückerstattet (Grund: {reason})")
+ZnJvbSBzcWxhbGNoZW15LmV4dC5hc3luY2lvIGltcG9ydCBBc3luY1Nlc3Np
+b24KZnJvbSBzcWxhbGNoZW15IGltcG9ydCB1cGRhdGUsIHNlbGVjdApmcm9t
+IGFwcC5tb2RlbHMudXNlciBpbXBvcnQgVXNlciAgIyBGYWxscyBkdSBlaW4g
+VXNlci1Nb2RlbGwgaGFzdApmcm9tIGFwcC5tb2RlbHMudG9rZW5fdHJhbnNh
+Y3Rpb24gaW1wb3J0IFRva2VuVHJhbnNhY3Rpb24KaW1wb3J0IGxvZ2dpbmcK
+ZnJvbSBkYXRldGltZSBpbXBvcnQgZGF0ZXRpbWUKCmxvZ2dlciA9IGxvZ2dp
+bmcuZ2V0TG9nZ2VyKF9fbmFtZV9fKQoKYXN5bmMgZGVmIGdldF91c2VyX2Jh
+bGFuY2UoZGI6IEFzeW5jU2Vzc2lvbiwgdXNlcl9pZDogc3RyKSAtPiBpbnQ6
+CiAgICByZXN1bHQgPSBhd2FpdCBkYi5leGVjdXRlKAogICAgICAgIHNlbGVj
+dChVc2VyLmJhbGFuY2UpLndoZXJlKFVzZXIuaWQgPT0gdXNlcl9pZCkKICAg
+ICkKICAgIGJhbGFuY2UgPSByZXN1bHQuc2NhbGFyX29uZV9vcl9ub25lKCkK
+ICAgIHJldHVybiBiYWxhbmNlIG9yIDAKCgphc3luYyBkZWYgZGVkdWN0X3Rv
+a2Vuc193aXRoX3JvbGxiYWNrKAogICAgZGI6IEFzeW5jU2Vzc2lvbiwKICAg
+IHVzZXJfaWQ6IHN0ciwKICAgIGFtb3VudDogaW50LAogICAgc2VhcmNoX2lk
+OiBzdHIsCiAgICByZWFzb246IHN0ciA9ICJzY3JhcGVfdHJpZ2dlciIKKSAt
+PiBkaWN0OgogICAgIiIiVG9rZW4gYWJidWNoZW4gbWl0IFRyYW5zYWt0aW9u
+IiIiCiAgICBpZiBhbW91bnQgPD0gMDoKICAgICAgICByZXR1cm4geyJzdWNj
+ZXNzIjogVHJ1ZSwgInRyYW5zYWN0aW9uX2lkIjogTm9uZX0KCiAgICBjdXJy
+ZW50X2JhbGFuY2UgPSBhd2FpdCBnZXRfdXNlcl9iYWxhbmNlKGRiLCB1c2Vy
+X2lkKQoKICAgIGlmIGN1cnJlbnRfYmFsYW5jZSA8IGFtb3VudDoKICAgICAg
+ICBsb2dnZXIud2FybmluZyhmIlVzZXIge3VzZXJfaWR9IGhhdCBuaWNodCBn
+ZW51ZyBUb2tlbnMgKHtjdXJyZW50X2JhbGFuY2V9IDwge2Ftb3VudH0pIikK
+ICAgICAgICByZXR1cm4geyJzdWNjZXNzIjogRmFsc2UsICJyZWFzb24iOiAi
+aW5zdWZmaWNpZW50X2Z1bmRzIn0KCiAgICAjIEFiYnVjaHVuZwogICAgYXdh
+aXQgZGIuZXhlY3V0ZSgKICAgICAgICB1cGRhdGUoVXNlcikKICAgICAgICAu
+d2hlcmUoVXNlci5pZCA9PSB1c2VyX2lkKQogICAgICAgIC52YWx1ZXMoYmFs
+YW5jZT1Vc2VyLmJhbGFuY2UgLSBhbW91bnQpCiAgICApCgogICAgdHJhbnNh
+Y3Rpb24gPSBUb2tlblRyYW5zYWN0aW9uKAogICAgICAgIHVzZXJfaWQ9dXNl
+cl9pZCwKICAgICAgICBzZWFyY2hfaWQ9c2VhcmNoX2lkLAogICAgICAgIGFt
+b3VudD0tYW1vdW50LAogICAgICAgIHJlYXNvbj1yZWFzb24sCiAgICAgICAg
+Y3JlYXRlZF9hdD1kYXRldGltZS51dGNub3coKQogICAgKQogICAgZGIuYWRk
+KHRyYW5zYWN0aW9uKQogICAgYXdhaXQgZGIuZmx1c2goKQoKICAgIGF3YWl0
+IGRiLmNvbW1pdCgpCgogICAgbG9nZ2VyLmluZm8oZiJ7YW1vdW50fSBUb2tl
+bnMgdm9uIFVzZXIge3VzZXJfaWR9IGFiZ2VidWNodCAoU3VjaGUge3NlYXJj
+aF9pZH0pIikKICAgIHJldHVybiB7InN1Y2Nlc3MiOiBUcnVlLCAidHJhbnNh
+Y3Rpb25faWQiOiB0cmFuc2FjdGlvbi5pZH0KCgphc3luYyBkZWYgcmVmdW5k
+X3Rva2VucygKICAgIGRiOiBBc3luY1Nlc3Npb24sCiAgICB1c2VyX2lkOiBz
+dHIsCiAgICBhbW91bnQ6IGludCwKICAgIHNlYXJjaF9pZDogc3RyLAogICAg
+cmVhc29uOiBzdHIgPSAic2NyYXBlX2Vycm9yIgopOgogICAgIiIiUsO8Y2tl
+cnN0YXR0dW5nIGJlaSBGZWhsZXJuIiIiCiAgICBhd2FpdCBkYi5leGVjdXRl
+KAogICAgICAgIHVwZGF0ZShVc2VyKQogICAgICAgIC53aGVyZShVc2VyLmlk
+ID09IHVzZXJfaWQpCiAgICAgICAgLnZhbHVlcyhiYWxhbmNlPVVzZXIuYmFs
+YW5jZSArIGFtb3VudCkKICAgICkKCiAgICB0cmFuc2FjdGlvbiA9IFRva2Vu
+VHJhbnNhY3Rpb24oCiAgICAgICAgdXNlcl9pZD11c2VyX2lkLAogICAgICAg
+IHNlYXJjaF9pZD1zZWFyY2hfaWQsCiAgICAgICAgYW1vdW50PSthbW91bnQs
+CiAgICAgICAgcmVhc29uPWYicmVmdW5kX3tyZWFzb259IiwKICAgICAgICBj
+cmVhdGVkX2F0PWRhdGV0aW1lLnV0Y25vdygpCiAgICApCiAgICBkYi5hZGQo
+dHJhbnNhY3Rpb24pCgogICAgYXdhaXQgZGIuY29tbWl0KCkKICAgIGxvZ2dl
+ci5pbmZvKGYie2Ftb3VudH0gVG9rZW5zIGFuIFVzZXIge3VzZXJfaWR9IHp1
+csO8Y2tlcnN0YXR0ZXQgKEdydW5kOiB7cmVhc29ufSkiKQoKCmFzeW5jIGRl
+ZiBhZGRfdG9rZW5zKAogICAgZGI6IEFzeW5jU2Vzc2lvbiwKICAgIHVzZXJf
+aWQ6IHN0ciwKICAgIGFtb3VudDogaW50LAogICAgcmVhc29uOiBzdHIgPSAi
+cGF5bWVudF9nYXRld2F5IiwKKSA9IGRpY3Q6CiAgICAiIiJHdXRzY2hyaWZ0
+IGR1cmNoIFBheW1lbnQtR2F0ZXdheSAoZS5nLiBTdHJpcGUsIFBheVBhbCkK
+ICAgIFRoaXMgY2FuIGFsc28gYmUgdXNlZCBmb3IgcmVmdW5kcyAocGFzcyBu
+ZWdhdGl2ZSBhbW91bnQpIG9yIGFkbWluIHRvcC11cHMuCiAgICAiIiIKICAg
+IGF3YWl0IGRiLmV4ZWN1dGUoCiAgICAgICAgdXBkYXRlKFVzZXIpCiAgICAg
+ICAgLndoZXJlKFVzZXIuaWQgPT0gdXNlcl9pZCkKICAgICAgICAudmFsdWVz
+KGJhbGFuY2U9VXNlci5iYWxhbmNlICsgYW1vdW50KQogICAgKQoKICAgIHRy
+YW5zYWN0aW9uID0gVG9rZW5UcmFuc2FjdGlvbigKICAgICAgICB1c2VyX2lk
+PXVzZXJfaWQsCiAgICAgICAgYW1vdW50PSthbW91bnQsCiAgICAgICAgcmVh
+c29uPXJlYXNvbiwKICAgICAgICBjcmVhdGVkX2F0PWRhdGV0aW1lLnV0Y25v
+dygpCiAgICApCiAgICBkYi5hZGQodHJhbnNhY3Rpb24pCiAgICBhd2FpdCBk
+Yi5mbHVzaCgpCgogICAgYXdhaXQgZGIuY29tbWl0KCkKCiAgICAjIEdldCBu
+ZXcgYmFsYW5jZQogICAgbmV3X2JhbGFuY2UgPSBhd2FpdCBnZXRfdXNlcl9i
+YWxhbmNlKGRiLCB1c2VyX2lkKQoKICAgIGxvZ2dlci5pbmZvKGYie2Ftb3Vu
+dH0gVG9rZW5zIGFuIFVzZXIge3VzZXJfaWR9IGd1dGdlc2NocmllYmVuIChH
+cnVuZDoge3JlYXNvbn0sIE5ldWVyIFN0YW5kOiB7bmV3X2JhbGFuY2V9KSIp
+CiAgICByZXR1cm4geyJzdWNjZXNzIjogVHJ1ZSwgInRyYW5zYWN0aW9uX2lk
+IjogdHJhbnNhY3Rpb24uaWQsICJuZXdfYmFsYW5jZSI6IG5ld19iYWxhbmNl
+fQo=

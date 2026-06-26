@@ -1,117 +1,106 @@
-import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.sql import func
-from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-from app.core.database import AsyncSessionLocal
-from app.models.search import Search
-from app.models.seen_ad import SeenAd
-from app.services.token_service import deduct_tokens_with_rollback, refund_tokens
-from app.services.webhook_service import send_webhook
-from app.utils.url_generator import generate_search_url
-from scraper.scraper import get_filtered_search_result
-
-logger = logging.getLogger(__name__)
-
-
-async def filter_new_ads(db: AsyncSession, search_id: int, ads: list) -> list:
-    """Gibt nur Anzeigen zurueck, die noch nicht gesehen wurden."""
-    if not ads:
-        return []
-
-    ad_ids = [a["ad_id"] for a in ads if a.get("ad_id")]
-    if not ad_ids:
-        return ads  # Kein ad_id -> kein Dedup moeglich
-
-    result = await db.execute(
-        select(SeenAd.ad_id).where(
-            SeenAd.search_id == search_id,
-            SeenAd.ad_id.in_(ad_ids)
-        )
-    )
-    already_seen = {row[0] for row in result.fetchall()}
-
-    new_ads = [a for a in ads if a.get("ad_id") not in already_seen]
-    logger.info(f"Dedup: {len(ads)} gefunden, {len(new_ads)} neu, {len(already_seen)} bereits gesehen")
-    return new_ads
-
-
-async def mark_ads_as_seen(db: AsyncSession, search_id: int, ads: list):
-    """Speichert neue Anzeigen in seen_ads."""
-    for ad in ads:
-        if not ad.get("ad_id"):
-            continue
-        stmt = pg_insert(SeenAd).values(
-            search_id=search_id,
-            ad_id=ad["ad_id"],
-            title=ad.get("title"),
-            price=ad.get("price"),
-            link=ad.get("link"),
-        ).on_conflict_do_nothing(constraint="uq_seen_ad")
-        await db.execute(stmt)
-    await db.commit()
-
-
-async def trigger_single_search(search_id: int, user_id: str):
-    async with AsyncSessionLocal() as db:
-        search = await db.get(Search, search_id)
-        if not search or not search.enabled:
-            return
-
-        cost = getattr(search, "estimated_cost_per_run", 1)
-
-        deduct_result = await deduct_tokens_with_rollback(
-            db=db,
-            user_id=user_id,
-            amount=cost,
-            search_id=str(search_id)
-        )
-
-        if not deduct_result["success"]:
-            search.enabled = False
-            search.last_run = func.now()
-            await db.commit()
-            logger.warning(f"Suche {search_id} pausiert – nicht genug Tokens")
-            return
-
-        try:
-            search_url = generate_search_url(
-                keyword=search.keyword,
-                location=search.location,
-                price_min=search.price_min,
-                price_max=search.price_max,
-                category=search.category,
-                sort=search.sort or "date"
-            )
-
-            all_ads = await get_filtered_search_result(
-                search_config=search,
-                filter_config=getattr(search, "filter_config", None),
-                store=None,
-                config=None
-            )
-
-            # Nur neue Anzeigen durchlassen
-            new_ads = await filter_new_ads(db, search_id, all_ads)
-
-            if new_ads:
-                # Als gesehen markieren
-                await mark_ads_as_seen(db, search_id, new_ads)
-
-                if search.callback_url:
-                    await send_webhook(search.callback_url, {
-                        "search_id": search.id,
-                        "name": search.name,
-                        "new_ads_count": len(new_ads),
-                        "ads": new_ads[:10]
-                    })
-
-            logger.info(f"Suche {search_id} fertig – {len(new_ads)} neue Anzeigen")
-
-        except Exception as e:
-            logger.error(f"Fehler bei Suche {search_id}: {e}")
-            await refund_tokens(db, user_id, cost, str(search_id), reason="scrape_error")
-        finally:
-            search.last_run = func.now()
-            await db.commit()
+aW1wb3J0IGxvZ2dpbmcKZnJvbSBzcWxhbGNoZW15LmV4dC5hc3luY2lvIGlt
+cG9ydCBBc3luY1Nlc3Npb24KZnJvbSBzcWxhbGNoZW15IGltcG9ydCBzZWxl
+Y3QKZnJvbSBzcWxhbGNoZW15LnNxbCBpbXBvcnQgZnVuYwpmcm9tIHNxbGFs
+Y2hlbXkuZGlhbGVjdHMucG9zdGdyZXNxbCBpbXBvcnQgaW5zZXJ0IGFzIHBn
+X2luc2VydAoKZnJvbSBhcHAuY29yZS5kYXRhYmFzZSBpbXBvcnQgQXN5bmNT
+ZXNzaW9uTG9jYWwKZnJvbSBhcHAubW9kZWxzLnNlYXJjaCBpbXBvcnQgU2Vh
+cmNoCmZyb20gYXBwLm1vZGVscy5zZWVuX2FkIGltcG9ydCBTZWVuQWQKZnJv
+bSBhcHAuc2VydmljZXMudG9rZW5fc2VydmljZSBpbXBvcnQgZGVkdWN0X3Rv
+a2Vuc193aXRoX3JvbGxiYWNrLCByZWZ1bmRfdG9rZW5zCmZyb20gYXBwLnNl
+cnZpY2VzLndlYmhvb2tfc2VydmljZSBpbXBvcnQgc2VuZF93ZWJob29rCmZy
+b20gYXBwLnNlcnZpY2VzLnJhdGVfbGltaXRfc2VydmljZSBpbXBvcnQgY2hl
+Y2tfcmF0ZV9saW1pdCwgbG9nX2V4ZWN1dGlvbgpmcm9tIGFwcC51dGlscy51
+cmxfZ2VuZXJhdG9yIGltcG9ydCBnZW5lcmF0ZV9zZWFyY2hfdXJsCmZyb20g
+YXBwLmNvbmZpZyBpbXBvcnQgc2V0dGluZ3MKZnJvbSBzY3JhcGVyLnNjcmFw
+ZXIgaW1wb3J0IGdldF9maWx0ZXJlZF9zZWFyY2hfcmVzdWx0Cgpsb2dnZXIg
+PSBsb2dnaW5nLmdldExvZ2dlcihfX25hbWVfXykKCgphc3luYyBkZWYgZmls
+dGVyX25ld19hZHMoZGI6IEFzeW5jU2Vzc2lvbiwgc2VhcmNoX2lkOiBpbnQs
+IGFkczogbGlzdCkgLT4gbGlzdDoKICAgICIiIkdpYnQgbnVyIEFuemVpZ2Vu
+IHp1cudlY2ssIGRpZSBub2NoIG5pY2h0IGdlc2VoZW4gd3VyZGVuLiIiIgog
+ICAgaWYgbm90IGFkczoKICAgICAgICByZXR1cm4gW10KCiAgICBhZF9pZHMg
+PSBbYVsiYWRfaWQiXSBmb3IgYSBpbiBhZHMgaWYgYS5nZXQoImFkX2lkIild
+CiAgICBpZiBub3QgYWRfaWRzOgogICAgICAgIHJldHVybiBhZHMgICMgS2Vp
+biBhZF9pZCAtPiBrZWluIERlZHVwIG1vZWdsaWNoCgogICAgcmVzdWx0ID0g
+YXdhaXQgZGIuZXhlY3V0ZSgKICAgICAgICBzZWxlY3QoU2VlbkFkLmFkX2lk
+KS53aGVyZSgKICAgICAgICAgICAgU2VlbkFkLnNlYXJjaF9pZCA9PSBzZWFy
+Y2hfaWQsCiAgICAgICAgICAgIFNlZW5BZC5hZF9pZC5pbl8oYWRfaWRzKQog
+ICAgICAgICkKICAgICkKICAgIGFscmVhZHlfc2VlbiA9IHtyb3dbMF0gZm9y
+IHJvdyBpbiByZXN1bHQuZmV0Y2hhbGwoKX0KCiAgICBuZXdfYWRzID0gW2Eg
+Zm9yIGEgaW4gYWRzIGlmIGEuZ2V0KCJhZF9pZCIpIG5vdCBpbiBhbHJlYWR5
+X3NlZW5dCiAgICBsb2dnZXIuaW5mbyhmIkRlZHVwOiB7bGVuKGFkcyl9IGdl
+ZnVuZGVuLCB7bGVuKG5ld19hZHMpfSBuZXUsIHtsZW4oYWxyZWFkeV9zZWVu
+KX0gYmVyZWl0cyBnZXNlaGVuIikKICAgIHJldHVybiBuZXdfYWRzCgoKYXN5
+bmMgZGVmIG1hcmtfYWRzX2FzX3NlZW4oZGI6IEFzeW5jU2Vzc2lvbiwgc2Vh
+cmNoX2lkOiBpbnQsIGFkczogbGlzdCk6CiAgICAiIiJTcGVpY2hlcnQgbmV1
+ZSBBbnplaWdlbiBpbiBzZWVuX2Fkcy4iIiIKICAgIGZvciBhZCBpbiBhZHM6
+CiAgICAgICAgaWYgbm90IGFkLmdldCgiYWRfaWQiKToKICAgICAgICAgICAg
+Y29udGludWUKICAgICAgICBzdG10ID0gcGdfaW5zZXJ0KFNlZW5BZCkudmFs
+dWVzKAogICAgICAgICAgICBzZWFyY2hfaWQ9c2VhcmNoX2lkLAogICAgICAg
+ICAgICBhZF9pZD1hZFsiYWRfaWQiXSwKICAgICAgICAgICAgdGl0bGU9YWQu
+Z2V0KCJ0aXRsZSIpLAogICAgICAgICAgICBwcmljZT1hZC5nZXQoInByaWNl
+IiksCiAgICAgICAgICAgIGxpbms9YWQuZ2V0KCJsaW5rIiksCiAgICAgICAg
+KS5vbl9jb25mbGljdF9kb19ub3RoaW5nKGNvbnN0cmFpbnQ9InVxX3NlZW5f
+YWQiKQogICAgICAgIGF3YWl0IGRiLmV4ZWN1dGUoc3RtdCkKICAgIGF3YWl0
+IGRiLmNvbW1pdCgpCgoKYXN5bmMgZGVmIHRyaWdnZXJfc2luZ2xlX3NlYXJj
+aChzZWFyY2hfaWQ6IGludCwgdXNlcl9pZDogc3RyKToKICAgIGFzeW5jIHdp
+dGggQXN5bmNTZXNzaW9uTG9jYWwoKSBhcyBkYjoKICAgICAgICBzZWFyY2gg
+PSBhd2FpdCBkYi5nZXQoU2VhcmNoLCBzZWFyY2hfaWQpCiAgICAgICAgaWYg
+bm90IHNlYXJjaCBvciBub3Qgc2VhcmNoLmVuYWJsZWQ6CiAgICAgICAgICAg
+IHJldHVybgoKICAgICAgICAjIERlZmluZWQgY29zdCBwZXIgcnVuIChmcm9t
+IGNvbmZpZykKICAgICAgICBjb3N0ID0gc2V0dGluZ3MuVE9LRU5fQ09TVF9Q
+RVJfUlVOCiAgICAgICAgY29zdF9mcm9tX2RiID0gZ2V0YXR0cihzZWFyY2gs
+ICJlc3RpbWF0ZWRfY29zdF9wZXJfcnVuIiwgTm9uZSkKICAgICAgICBpZiBj
+b3N0X2Zyb21fZGIgYW5kIGNvc3RfZnJvbV9kYiAhPSBjb3N0OgogICAgICAg
+ICAgICBjb3N0ID0gY29zdF9mcm9tX2RiICAjIE92ZXJyaWRlIHBlciBzZWFy
+Y2ggaWYgc2V0CgogICAgICAgICMgUHJpY2luZyB0aW1lIDE6IFJhdGUgTGltaXQK
+ICAgICAgICBpZiBub3QgYXdhaXQgY2hlY2tfcmF0ZV9saW1pdChkYiwgdXNl
+cl9pZCk6CiAgICAgICAgICAgIGxvZ2dlci53YXJuaW5nKGYiU3VjaGUge3Nl
+YXJjaF9pZH0gc2tpcHBlZCBmw7xyIFVzZXIge3VzZXJfaWR9IOKAkyBSYXRl
+IExpbWl0IikKICAgICAgICAgICAgcmV0dXJuICAjIFNraXAsIGRvbid0IHBh
+dXNlIGRlciB3YXRjaGVyCgogICAgICAgICMgUHJpY2luZyB0aW1lIDI6IFRv
+a2VuIGRlZHVjdGlvbgogICAgICAgIGRlZHVjdF9yZXN1bHQgPSBhd2FpdCBk
+ZWR1Y3RfdG9rZW5zX3dpdGhfcm9sbGJhY2soCiAgICAgICAgICAgIGRiPWRi
+LAogICAgICAgICAgICB1c2VyX2lkPXVzZXJfaWQsCiAgICAgICAgICAgIGFt
+b3VudD1jb3N0LAogICAgICAgICAgICBzZWFyY2hfaWQ9c3RyKHNlYXJjaF9p
+ZCkKICAgICAgICApCgogICAgICAgIGlmIG5vdCBkZWR1Y3RfcmVzdWx0WyJz
+dWNjZXNzIl06CiAgICAgICAgICAgIHNlYXJjaC5lbmFibGVkID0gRmFsc2UK
+ICAgICAgICAgICAgc2VhcmNoLmxhc3RfcnVuID0gZnVuYy5ub3coKQogICAg
+ICAgICAgICBhd2FpdCBkYi5jb21taXQoKQogICAgICAgICAgICBsb2dnZXIu
+d2FybmluZyhmIlN1Y2hlIHtzZWFyY2hfaWR9IHBhdXNpZXJ0IOKAkyBuaWNo
+dCBnZW51ZyBUb2tlbnMiKQogICAgICAgICAgICByZXR1cm4KCiAgICAgICAg
+dHJ5OgogICAgICAgICAgICAjIExvZyBleGVjdXRpb24gZm9yIHJhdGUtbGlt
+aXRpbmcKICAgICAgICAgICAgYXdhaXQgbG9nX2V4ZWN1dGlvbihkYiwgdXNl
+cl9pZCwgc2VhcmNoX2lkKQoKICAgICAgICAgICAgc2VhcmNoX3VybCA9IGdl
+bmVyYXRlX3NlYXJjaF91cmwoCiAgICAgICAgICAgICAgICBrZXl3b3JkPXNl
+YXJjaC5rZXl3b3JkLAogICAgICAgICAgICAgICAgbG9jYXRpb249c2VhcmNo
+LmxvY2F0aW9uLAogICAgICAgICAgICAgICAgcHJpY2VfbWluPXNlYXJjaC5w
+cmljZV9taW4sCiAgICAgICAgICAgICAgICBwcmljZV9tYXg9c2VhcmNoLnBy
+aWNlX21heCwKICAgICAgICAgICAgICAgIGNhdGVnb3J5PXNlYXJjaC5jYXRl
+Z29yeSwKICAgICAgICAgICAgICAgIHNvcnQ9c2VhcmNoLnNvcnQgb3IgImRh
+dGUiCiAgICAgICAgICAgICkKCiAgICAgICAgICAgIGFsbF9hZHMgPSBhd2Fp
+dCBnZXRfZmlsdGVyZWRfc2VhcmNoX3Jlc3VsdCgKICAgICAgICAgICAgICAg
+IHNlYXJjaF9jb25maWc9c2VhcmNoLAogICAgICAgICAgICAgICAgZmlsdGVy
+X2NvbmZpZz1nZXRhdHRyKHNlYXJjaCwgImZpbHRlcl9jb25maWciLCBOb25l
+KSwKICAgICAgICAgICAgICAgIHN0b3JlPU5vbmUsCiAgICAgICAgICAgICAg
+ICBjb25maWc9Tm9uZQogICAgICAgICAgICApCgogICAgICAgICAgICAjIE51
+ciBuZXVlIEFuemVpZ2VuIGR1cmNobGFzc2VuCiAgICAgICAgICAgIG5ld19h
+ZHMgPSBhd2FpdCBmaWx0ZXJfbmV3X2FkcyhkYiwgc2VhcmNoX2lkLCBhbGxf
+YWRzKQoKICAgICAgICAgICAgaWYgbmV3X2FkczoKICAgICAgICAgICAgICAg
+ICMgQWxzIGdlc2VoZW4gbWFya2llcmVuCiAgICAgICAgICAgICAgICBhd2Fp
+dCBtYXJrX2Fkc19hc19zZWVuKGRiLCBzZWFyY2hfaWQsIG5ld19hZHMpCgog
+ICAgICAgICAgICAgICAgaWYgc2VhcmNoLmNhbGxiYWNrX3VybDoKICAgICAg
+ICAgICAgICAgICAgICBhd2FpdCBzZW5kX3dlYmhvb2soc2VhcmNoLmNhbGxi
+YWNrX3VybCwgewogICAgICAgICAgICAgICAgICAgICAgICAic2VhcmNoX2lk
+Ijogc2VhcmNoLmlkLAogICAgICAgICAgICAgICAgICAgICAgICAibmFtZSI6
+IHNlYXJjaC5uYW1lLAogICAgICAgICAgICAgICAgICAgICAgICAibmV3X2Fk
+c19jb3VudCI6IGxlbihuZXdfYWRzKSwKICAgICAgICAgICAgICAgICAgICAg
+ICAgImFkcyI6IG5ld19hZHNbOjEwXQogICAgICAgICAgICAgICAgICAgIH0p
+CgogICAgICAgICAgICBsb2dnZXIuaW5mbyhmIlN1Y2hlIHtzZWFyY2hfaWR9
+IGZlcnRpZyDigJMge2xlbihuZXdfYWRzKX0gbmV1ZSBBbnplaWdlbiIpCgog
+ICAgICAgIGV4Y2VwdCBFeGNlcHRpb24gYXMgZToKICAgICAgICAgICAgbG9n
+Z2VyLmVycm9yKGYiRmVobGVyIGJlaSBTdWNoZSB7c2VhcmNoX2lkfToge2V9
+IikKICAgICAgICAgICAgYXdhaXQgcmVmdW5kX3Rva2VucyhkYiwgdXNlcl9p
+ZCwgY29zdCwgc3RyKHNlYXJjaF9pZCksIHJlYXNvbj0ic2NyYXBlX2Vycm9y
+IikKICAgICAgICBmaW5hbGx5OgogICAgICAgICAgICBzZWFyY2gubGFzdF9y
+dW4gPSBmdW5jLm5vdygpCiAgICAgICAgICAgIGF3YWl0IGRiLmNvbW1pdCgp
+Cg==
