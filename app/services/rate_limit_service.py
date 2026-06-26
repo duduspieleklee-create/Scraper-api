@@ -1,29 +1,36 @@
-ZnJvbSBzcWxhbGNoZW15LmV4dC5hc3luY2lvIGltcG9ydCBBc3luY1Nlc3Np
-b24KZnJvbSBzcWxhbGNoZW15IGltcG9ydCBzZWxlY3QsIGZ1bmMKZnJvbSBh
-cHAubW9kZWxzLnNlYXJjaF9leGVjdXRpb25fbG9nIGltcG9ydCBTZWFyY2hF
-eGVjdXRpb25Mb2cKaW1wb3J0IGxvZ2dpbmcKZnJvbSBkYXRldGltZSBpbXBv
-cnQgZGF0ZXRpbWUsIHRpbWVkZWx0YQoKbG9nZ2VyID0gbG9nZ2luZy5nZXRM
-b2dnZXIoX19uYW1lX18pCgpNQVhfRVhFQ1VUSU9OU19QRVJfTUlOVVRFID0g
-NQoKCmFzeW5jIGRlZiBjaGVja19yYXRlX2xpbWl0KGRiOiBBc3luY1Nlc3Np
-b24sIHVzZXJfaWQ6IHN0cikgLT4gYm9vbDoKICAgICIiIgogICAgUmV0dXJu
-cyBUcnVlIGlmIHRoZSB1c2VyIGlzIHVuZGVyIHRoZSByYXRlIGxpbWl0ICg1
-IHJ1bnMvbWluKS4KICAgIEZhbHNlIGlmIHRoZSB1c2VyIGhhcyBhbHJlYWR5
-IHVzZWQgdGhlaXIgNSBydW5zIGluIHRoZSBsYXN0IDYwIHNlY29uZHMuCiAg
-ICAiIiIKICAgIGN1dG9mZiA9IGRhdGV0aW1lLnV0Y25vdygpIC0gdGltZWRl
-bHRhKHNlY29uZHM9NjApCiAgICByZXN1bHQgPSBhd2FpdCBkYi5leGVjdXRl
-KAogICAgICAgIHNlbGVjdChmdW5jLmNvdW50KFNlYXJjaEV4ZWN1dGlvbkxv
-Zy5pZCkpLndoZXJlKAogICAgICAgICAgICBTZWFyY2hFeGVjdXRpb25Mb2cu
-dXNlcl9pZCA9PSB1c2VyX2lkLAogICAgICAgICAgICBTZWFyY2hFeGVjdXRp
-b25Mb2cuZXhlY3V0ZWRfYXQgPj0gY3V0b2ZmLAogICAgICAgICkKICAgICkK
-ICAgIHJlY2VudF9ydW5zID0gcmVzdWx0LnNjYWxhcl9vbmVfb3Jfbm9uZSgp
-IG9yIDAKCiAgICBpZiByZWNlbnRfcnVucyA+PSBNQVhfRVhFQ1VUSU9OU19Q
-RVJfTUlOVVRFOgogICAgICAgIGxvZ2dlci53YXJuaW5nKGYiUmF0ZSBsaW1p
-dCBmb3IgVXNlciB7dXNlcl9pZH06IHtyZWNlbnRfcnVuc30gUnVucyBpbiBs
-ZXR6dGVuIDYwcyIpCiAgICAgICAgcmV0dXJuIEZhbHNlCiAgICByZXR1cm4g
-VHJ1ZQoKCmFzeW5jIGRlZiBsb2dfZXhlY3V0aW9uKGRiOiBBc3luY1Nlc3Np
-b24sIHVzZXJfaWQ6IHN0ciwgc2VhcmNoX2lkOiBpbnQpOgogICAgIiIiVHJh
-Y2tzIGVhY2ggc2NyYXBlciBleGVjdXRpb24gZm9yIHJhdGUtbGltaXRpbmcu
-IiIiCiAgICBsb2cgPSBTZWFyY2hFeGVjdXRpb25Mb2coCiAgICAgICAgdXNl
-cl9pZD11c2VyX2lkLAogICAgICAgIHNlYXJjaF9pZD1zZWFyY2hfaWQsCiAg
-ICAgICAgZXhlY3V0ZWRfYXQ9ZGF0ZXRpbWUudXRjbm93KCkKICAgICkKICAg
-IGRiLmFkZChsb2cpCiAgICBhd2FpdCBkYi5mbHVzaCgpCg==
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
+from app.models.search_execution_log import SearchExecutionLog
+
+import logging
+logger = logging.getLogger(__name__)
+
+max_executions_per_minute = 5   # From app.config or hardcoded below will override in settings
+
+async def check_rate_limit(
+    db: AsyncSession,
+    user_id: str,
+) -> bool:
+    """
+    Check if the user has exceeded the execution limit in the last minute.
+    Returns True if under the limit, False if rate-limited.
+    """
+    # Check how many executions in the last minute
+    one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+    result = await db.execute(
+        select(func.count(SearchExecutionLog.id))
+        .where(
+            SearchExecutionLog.user_id == user_id,
+            SearchExecutionLog.executed_at >= one_minute_ago,
+        )
+    )
+    count = result.scalar_one_or_none() or 0
+    return count < max_executions_per_minute
+
+
+async def log_execution(db, user_id, search_id):
+    """Log an execution for rate limiting purposes."""
+    stmt = SearchExecutionLog(user_id=user_id, search_id=search_id)
+    db.add(stmt)
+    await db.commit()
