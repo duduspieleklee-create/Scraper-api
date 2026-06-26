@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 
 from app.core.database import get_db
-from app.core.auth import get_current_user, TokenData
+from app.core.auth import get_current_active_user, TokenData
 from app.models.search import Search
 
 router = APIRouter()
@@ -41,7 +41,7 @@ class SearchResponse(BaseModel):
 @router.post("/searches", response_model=dict)
 async def create_search(
     data: SearchCreate,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = Search(
@@ -64,7 +64,7 @@ async def create_search(
 
 @router.get("/searches", response_model=List[SearchResponse])
 async def list_searches(
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(
@@ -76,7 +76,7 @@ async def list_searches(
 @router.get("/searches/{search_id}", response_model=SearchResponse)
 async def get_search(
     search_id: int,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
@@ -90,7 +90,7 @@ async def get_search(
 @router.post("/searches/{search_id}/pause")
 async def pause_search(
     search_id: int,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
@@ -106,7 +106,7 @@ async def pause_search(
 @router.post("/searches/{search_id}/resume")
 async def resume_search(
     search_id: int,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
@@ -122,7 +122,7 @@ async def resume_search(
 @router.delete("/searches/{search_id}")
 async def delete_search(
     search_id: int,
-    current_user: TokenData = Depends(get_current_user),
+    current_user: TokenData = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db)
 ):
     search = await db.get(Search, search_id)
