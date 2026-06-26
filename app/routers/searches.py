@@ -7,7 +7,7 @@ from typing import Optional, List
 from datetime import datetime
 import asyncio
 from app.core.database import get_db
-from app.models.search import Search, SearchStatus
+from app.models.search import Search
 from app.models.seen_ad import SeenAd
 from app.models.user import User
 from app.services.scraper_service import trigger_single_search, get_price_for_search
