@@ -1,62 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <title>Kleinanzeigen Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        .active { color: green; font-weight: bold; }
-        .paused { color: orange; }
-        button { padding: 6px 12px; margin: 2px; cursor: pointer; }
-        .pause { background: #ff9800; color: white; }
-        .resume { background: #4caf50; color: white; }
-    </style>
-</head>
+<html>
+<head><title>Dashboard</title></head>
 <body>
-    <h1>🛒 Kleinanzeigen Notifier Dashboard</h1>
-    <p><a href="/api/v1/docs">API Docs</a> | <a href="/health">Health Check</a></p>
-
-    <h2>Aktive Suchen</h2>
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Keyword</th>
-            <th>Interval</th>
-            <th>Status</th>
-            <th>Last Run</th>
-            <th>Aktionen</th>
-        </tr>
-        {% for search in searches %}
-        <tr>
-            <td>{{ search.name }}</td>
-            <td>{{ search.keyword }}</td>
-            <td>{{ search.interval_minutes }} min</td>
-            <td class="{% if search.enabled %}active{% else %}paused{% endif %}">
-                {{ 'Aktiv' if search.enabled else 'Pausiert' }}
-            </td>
-            <td>{{ search.last_run or 'Noch nie' }}</td>
-            <td>
-                {% if search.enabled %}
-                <button class="pause" onclick="pauseSearch({{ search.id }})">Pausieren</button>
-                {% else %}
-                <button class="resume" onclick="resumeSearch({{ search.id }})">Aktivieren</button>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
-
-    <script>
-        async function pauseSearch(id) {
-            await fetch(`/api/v1/searches/${id}/pause`, { method: 'POST' });
-            location.reload();
-        }
-        async function resumeSearch(id) {
-            await fetch(`/api/v1/searches/${id}/resume`, { method: 'POST' });
-            location.reload();
-        }
-    </script>
+    <h1>Kleinanzeigen Dashboard</h1>
+    <p>Suchen: {{ searches|length }}</p>
+    <pre>{{ searches }}</pre>
 </body>
 </html>
