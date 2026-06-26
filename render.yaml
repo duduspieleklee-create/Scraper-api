@@ -1,10 +1,27 @@
-### 2. `.gitignore`
+services:
+  - type: web
+    name: kleinanzeigen-api
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kleinanzeigen-db
+          property: connectionString
 
-```gitignore
-__pycache__/
-*.pyc
-.env
-*.log
-postgres_data/
-alembic/versions/
-.DS_Store
+  - type: worker
+    name: kleinanzeigen-worker
+    env: docker
+    dockerfilePath: Dockerfile.worker
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kleinanzeigen-db
+          property: connectionString
+
+databases:
+  - name: kleinanzeigen-db
+    databaseName: kleinanzeigen
+    plan: free
