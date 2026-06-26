@@ -57,5 +57,20 @@ services:
     networks:
       - app_network
 
+  intelligence:
+    build:
+      context: .
+      dockerfile: Dockerfile.intelligence
+    container_name: kleinanzeigen-intelligence
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/kleinanzeigen
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+
 volumes:
   postgres_data:
