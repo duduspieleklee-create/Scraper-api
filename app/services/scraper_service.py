@@ -4,12 +4,13 @@ from app.models.search import Search
 from app.services.token_service import deduct_tokens_with_rollback, refund_tokens
 from app.services.webhook_service import send_webhook
 from app.utils.url_generator import generate_search_url
-from scraper.scraper import get_filtered_search_result   # Dein Scraper
+from scraper.scraper import get_filtered_search_result   # Dein Scraper aus dem Repo
 from sqlalchemy.sql import func
 
 logger = logging.getLogger(__name__)
 
 async def trigger_single_search(search_id: int, user_id: str):
+    """Vollständige Logik: Token prüfen → Scraper ausführen → Callback + Status-Update"""
     async with AsyncSessionLocal() as db:
         search = await db.get(Search, search_id)
         if not search or not search.enabled:
@@ -17,7 +18,7 @@ async def trigger_single_search(search_id: int, user_id: str):
 
         cost = getattr(search, 'estimated_cost_per_run', 1)
 
-        # Token abbuchen
+        # 1. Token abbuchen
         deduct_result = await deduct_tokens_with_rollback(
             db=db,
             user_id=user_id,
@@ -34,7 +35,7 @@ async def trigger_single_search(search_id: int, user_id: str):
 
         success = False
         try:
-            # URL generieren
+            # 2. Such-URL generieren
             search_url = generate_search_url(
                 keyword=search.keyword,
                 location=search.location,
@@ -44,7 +45,7 @@ async def trigger_single_search(search_id: int, user_id: str):
                 sort=search.sort or "date"
             )
 
-            # Scraper ausführen
+            # 3. Scraper ausführen
             new_ads = await get_filtered_search_result(
                 search_config=search,
                 filter_config=getattr(search, 'filter_config', None),
@@ -52,22 +53,23 @@ async def trigger_single_search(search_id: int, user_id: str):
                 config=None
             )
 
-            # Bei neuen Anzeigen Callback senden
+            # 4. Bei neuen Anzeigen → Webhook senden
             if new_ads and search.callback_url:
                 await send_webhook(search.callback_url, {
                     "search_id": search.id,
                     "name": search.name,
                     "new_ads_count": len(new_ads),
                     "timestamp": func.now().isoformat(),
-                    "ads": new_ads[:10]  # Begrenzung für Payload
+                    "ads": new_ads[:10]  # Begrenzung
                 })
 
             success = True
-            logger.info(f"Suche {search_id} erfolgreich – {len(new_ads)} neue Anzeigen gefunden")
+            logger.info(f"Suche {search_id} erfolgreich – {len(new_ads)} neue Anzeigen")
 
         except Exception as e:
             logger.error(f"Fehler bei Suche {search_id}: {e}")
             await refund_tokens(db, user_id, cost, str(search_id), reason="scrape_error")
         finally:
+            # 5. Status aktualisieren
             search.last_run = func.now()
             await db.commit()
