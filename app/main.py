@@ -1,93 +1,78 @@
-import logging
-import psutil
-from fastapi import FastAPI, Request, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-
-
-from fastapi import FastAPI
-
-app = FastAPI()
-
-
-@app.get("/")
-def read_root():
-    return {"message": "Scraper API is running"}
-
-@app.get("/scrape")
-def scrape(url: str):
-    # your scraping code here
-    return {"url": url, "status": "scraped"}
-
-
-
-from app.routers import searches
-from app.core.database import engine, Base, get_db
-from app.config import settings
+from fastapi import FastAPI, Query
+from fastapi.responses import JSONResponse
+import uvicorn
+import httpx
+import asyncio
+from typing import Optional
 
 app = FastAPI(
-    title="Kleinanzeigen Notifier API",
-    description="API für automatisierte Kleinanzeigen-Suchen mit Token-System",
+    title="Scraper API",
+    description="Simple web scraper API",
     version="1.0.0"
 )
 
-
-
-
-# Router einbinden
-app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
-
-# Dashboard Setup
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
-logger = logging.getLogger(__name__)
+@app.get("/")
+async def root():
+    return {
+        "message": "Scraper API is running! 🚀",
+        "endpoints": {
+            "scrape": "/scrape?url=https://example.com",
+            "dashboard": "/dashboard",
+            "health": "/health"
+        }
+    }
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "service": "scraper-api"}
 
-@app.get("/dashboard", include_in_schema=False)
-async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
+@app.get("/dashboard")
+async def dashboard():
+    return {
+        "status": "ok",
+        "message": "Welcome to Scraper API Dashboard",
+        "version": "1.0.0"
+    }
+
+@app.get("/scrape")
+async def scrape(
+    url: str = Query(..., description="URL to scrape"),
+    timeout: int = Query(30, description="Request timeout in seconds")
+):
+    """
+    Scrape a webpage and return basic information.
+    """
+    if not url.startswith("http"):
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Invalid URL. Must start with http:// or https://"}
+        )
+    
     try:
-        result = await db.execute(text("SELECT * FROM searches"))
-        searches_list = [dict(row._mapping) for row in result]
-        
-        # Server-Status
-        cpu = psutil.cpu_percent()
-        memory = psutil.virtual_memory().percent
-        disk = psutil.disk_usage('/').percent
-        active_searches = len([s for s in searches_list if s.get('enabled', False)])
-        
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "searches": searches_list,
-            "active_searches": active_searches,
-            "cpu": cpu,
-            "memory": memory,
-            "disk": disk,
-            "error": None
-        })
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            response = await client.get(url, follow_redirects=True)
+            response.raise_for_status()
+            
+            return {
+                "success": True,
+                "url": url,
+                "status_code": response.status_code,
+                "title": response.text.split("<title>")[1].split("</title>")[0] if "<title>" in response.text else None,
+                "content_length": len(response.text),
+                "scraped_at": asyncio.get_event_loop().time()  # placeholder
+            }
+            
+    except httpx.RequestError as e:
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Failed to scrape: {str(e)}"}
+        )
     except Exception as e:
-        logger.error(f"Dashboard Error: {e}")
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "searches": [],
-            "active_searches": 0,
-            "cpu": 0,
-            "memory": 0,
-            "disk": 0,
-            "error": str(e)
-        })
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error: {str(e)}"}
+        )
 
-@app.on_event("startup")
-async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    logger.info("🚀 API gestartet - Dashboard unter /dashboard")
-
+# Run with: uvicorn main:app --reload --port 10000
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=10000)
