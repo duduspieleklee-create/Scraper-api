@@ -21,6 +21,7 @@ from app.models.search import Search
 from app.models.seen_ad import SeenAd
 from app.models.user import User
 from app.models.token_transaction import TokenTransaction
+from app.models.proxy import Proxy
 app = FastAPI(
     title="Kleinanzeigen Notifier API",
     description="Automatische Benachrichtigungs-App fuer kleinanzeigen.de",
@@ -257,6 +258,11 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         price_avg = round(float(pr.av), 2) if pr.av is not None else None
         price_count = int(pr.cnt) if pr.cnt else 0
 
+        # ── Proxies ───────────────────────────────────────────────────────
+        total_proxies = await db.scalar(select(func.count(Proxy.id))) or 0
+        proxy_result = await db.execute(select(Proxy).order_by(Proxy.created_at.desc()))
+        proxy_list = proxy_result.scalars().all()
+
         # ── Searches with per-search ad counts ───────────────────────────
         rows = await db.execute(
             select(Search, func.count(SeenAd.id).label("ad_count"))
@@ -313,6 +319,9 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 "price_max": price_max,
                 "price_avg": price_avg,
                 "price_count": price_count,
+                # proxies
+                "total_proxies": total_proxies,
+                "proxy_list": proxy_list,
                 # tables
                 "searches_with_counts": searches_with_counts,
                 "recent_ads": recent_ads,
@@ -339,7 +348,8 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
                 "ads_per_day": [], "total_users": 0, "tokens_spent": 0,
                 "tokens_24h": 0, "webhook_ok": 0, "webhook_fail": 0,
                 "top_searches": [], "price_min": None, "price_max": None,
-                "price_avg": None, "price_count": 0,
+                "price_avg": None, "price_count": 0, "total_proxies": 0,
+                "proxy_list": [],
                 "searches_with_counts": [], "recent_ads": [],
                 "now": datetime.utcnow(),
             },
