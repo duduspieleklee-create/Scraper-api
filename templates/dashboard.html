@@ -5,7 +5,9 @@
     <h1>Kleinanzeigen Dashboard</h1>
     
     {% if error %}
-    <p style="color:red; background:#ffe6e6; padding:10px;">{{ error }}</p>
+    <h2 style="color:red;">Fehler aufgetreten</h2>
+    <p><strong>{{ error }}</strong></p>
+    <pre style="background:#f8f8f8; padding:10px; overflow:auto;">{{ traceback }}</pre>
     {% else %}
     <p>Anzahl Suchen: {{ searches|length }}</p>
     <table border="1">
