@@ -32,8 +32,8 @@ async def health():
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(text("SELECT * FROM searches"))
-        # WICHTIG: In normale Dict umwandeln
-        searches_list = [dict(row._mapping) for row in result]
+        # Richtige Umwandlung in einfache Dicts
+        searches_list = [dict(row) for row in result.mappings()]
         
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
