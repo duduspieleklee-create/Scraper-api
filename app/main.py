@@ -112,7 +112,7 @@ async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
         from sqlalchemy import case as sql_case
         wh_result = await db.execute(select(func.count(TokenTransaction.id).label("total"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_ok%"), 1), else_=0)).label("ok"), func.sum(sql_case((TokenTransaction.reason.ilike("%webhook_fail%"), 1), else_=0)).label("fail")))
         wh_row = wh_result.first()
-        webhook_ok = int(wh_row.ok)
+        webhook_ok = int(wh_row.ok) if wh_row.ok is not None else 0
         webhook_fail = int(wh_row.fail)
         from sqlalchemy import cast, Date as SQLDate
         ads_per_day_raw = await db.execute(select(cast(SeenAd.first_seen, SQLDate).label("day"), func.count(SeenAd.id).label("cnt")).where(SeenAd.first_seen >= now - timedelta(days=7)).group_by("day").order_by("day"))
