@@ -104,7 +104,7 @@ async def root():
 #   from app.models.seen_ad import SeenAd
 #   from app.models.user import User
 #   from app.models.token_transaction import TokenTransaction
-#   from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
+ from app.models.worker_heartbeat import WorkerHeartbeat   # NEW — see worker_heartbeat_model.py
 #
 # 2. After app = FastAPI(...), add:
 #
