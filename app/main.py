@@ -47,53 +47,148 @@ async def root():
     return {"message": "Kleinanzeigen Notifier API", "docs": "/docs", "dashboard": "/dashboard"}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# IMPROVED DASHBOARD ROUTE — copy these changes into app/main.py
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# 1. Add these imports at the top of app/main.py:
+#
+#    from fastapi import FastAPI, Depends, Request
+#    from fastapi.templating import Jinja2Templates
+#    from fastapi.staticfiles import StaticFiles
+#    from sqlalchemy.ext.asyncio import AsyncSession
+#    from sqlalchemy import select, func
+#    from datetime import datetime, timedelta
+#    import psutil
+#
+#    from app.core.database import get_db
+#    from app.models.search import Search
+#    from app.models.seen_ad import SeenAd
+#    from app.models.user import User
+#    from app.models.token_transaction import TokenTransaction
+#
+# 2. After creating the FastAPI app, mount static files and set up templates:
+#
+#    app.mount("/static", StaticFiles(directory="static"), name="static")
+#    templates = Jinja2Templates(directory="templates")
+#
+#    # Expose timedelta in Jinja2 templates (needed for next-run calculation)
+#    templates.env.globals["timedelta"] = timedelta
+#
+# 3. Replace the existing /dashboard route with the one below.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
-    scrapes_html = ""
-    for scrape in recent_scrapes[-10:]:
-        scrapes_html += f"""
-        <div class="scrape-item">
-            <strong>{scrape["title"] or "No Title"}</strong><br>
-            Preis: {scrape.get("price", "N/A")}<br>
-            <small>{scrape["url"][:80]}... | {scrape["timestamp"]}</small>
-        </div><hr>
-        """
+async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
+    try:
+        # ── Server metrics ────────────────────────────────────────────────
+        cpu = psutil.cpu_percent(interval=0.5)
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
 
-    html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Scraper Dashboard</title>
-    <meta charset="UTF-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; background: #f0f2f5; }}
-        h1 {{ color: #1a73e8; }}
-        .card {{ background: white; padding: 25px; margin: 20px 0; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }}
-        input {{ width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }}
-        button {{ padding: 14px 28px; background: #1a73e8; color: white; border: none; border-radius: 8px; cursor: pointer; }}
-        .scrape-item {{ margin: 10px 0; padding: 10px; background: #f9f9f9; border-radius: 6px; }}
-    </style>
-</head>
-<body>
-    <h1>Kleinanzeigen Notifier Dashboard</h1>
-    <div class="card">
-        <h2>Test Scraper</h2>
-        <form action="/scrape" method="get" target="_blank">
-            <input type="text" name="url" placeholder="Kleinanzeigen URL einfuegen..." required />
-            <br><br>
-            <button type="submit">Scrape starten</button>
-        </form>
-    </div>
-    <div class="card">
-        <h2>Letzte Scrapes ({len(recent_scrapes)})</h2>
-        {scrapes_html if scrapes_html else "<p>Noch keine Scrapes.</p>"}
-    </div>
-    <div class="card">
-        <p><a href="/docs">API Docs</a> | <a href="/health">Health</a></p>
-    </div>
-</body>
-</html>"""
-    return HTMLResponse(content=html)
+        memory_percent = mem.percent
+        memory_used_gb = round(mem.used / (1024 ** 3), 1)
+        memory_total_gb = round(mem.total / (1024 ** 3), 1)
+        disk_percent = disk.percent
+        disk_used_gb = round(disk.used / (1024 ** 3), 1)
+        disk_total_gb = round(disk.total / (1024 ** 3), 1)
 
+        # ── DB: search counts ─────────────────────────────────────────────
+        total_searches = await db.scalar(select(func.count(Search.id))) or 0
+        active_searches = (
+            await db.scalar(
+                select(func.count(Search.id)).where(Search.enabled == True)
+            )
+            or 0
+        )
+        paused_searches = total_searches - active_searches
+
+        # ── DB: ad counts ─────────────────────────────────────────────────
+        total_ads = await db.scalar(select(func.count(SeenAd.id))) or 0
+        yesterday = datetime.utcnow() - timedelta(hours=24)
+        ads_24h = (
+            await db.scalar(
+                select(func.count(SeenAd.id)).where(SeenAd.first_seen >= yesterday)
+            )
+            or 0
+        )
+
+        # ── DB: user count ────────────────────────────────────────────────
+        total_users = await db.scalar(select(func.count(User.id))) or 0
+
+        # ── DB: tokens spent (sum of all negative transactions) ───────────
+        tokens_spent_raw = await db.scalar(
+            select(func.sum(TokenTransaction.amount)).where(
+                TokenTransaction.amount < 0
+            )
+        )
+        tokens_spent = abs(int(tokens_spent_raw or 0))
+
+        # ── DB: searches with per-search ad counts ────────────────────────
+        rows = await db.execute(
+            select(Search, func.count(SeenAd.id).label("ad_count"))
+            .outerjoin(SeenAd, Search.id == SeenAd.search_id)
+            .group_by(Search.id)
+            .order_by(Search.created_at.desc())
+        )
+        searches_with_counts = rows.all()  # list of (Search, int)
+
+        # ── DB: recent ads (last 15) ──────────────────────────────────────
+        recent_ads_result = await db.execute(
+            select(SeenAd).order_by(SeenAd.first_seen.desc()).limit(15)
+        )
+        recent_ads = recent_ads_result.scalars().all()
+
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                # server
+                "cpu": cpu,
+                "memory_percent": memory_percent,
+                "memory_used_gb": memory_used_gb,
+                "memory_total_gb": memory_total_gb,
+                "disk_percent": disk_percent,
+                "disk_used_gb": disk_used_gb,
+                "disk_total_gb": disk_total_gb,
+                # searches
+                "total_searches": total_searches,
+                "active_searches": active_searches,
+                "paused_searches": paused_searches,
+                # ads
+                "total_ads": total_ads,
+                "ads_24h": ads_24h,
+                # users & tokens
+                "total_users": total_users,
+                "tokens_spent": tokens_spent,
+                # tables
+                "searches_with_counts": searches_with_counts,
+                "recent_ads": recent_ads,
+                # time helpers
+                "now": datetime.utcnow(),
+                "error": None,
+            },
+        )
+
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "error": str(exc),
+                # safe defaults so template doesn't crash
+                "cpu": 0, "memory_percent": 0, "memory_used_gb": 0,
+                "memory_total_gb": 0, "disk_percent": 0, "disk_used_gb": 0,
+                "disk_total_gb": 0, "total_searches": 0, "active_searches": 0,
+                "paused_searches": 0, "total_ads": 0, "ads_24h": 0,
+                "total_users": 0, "tokens_spent": 0,
+                "searches_with_counts": [], "recent_ads": [],
+                "now": datetime.utcnow(),
+            },
+        )
 
 @app.get("/scrape")
 async def scrape(url: str = Query(..., description="URL zum Scrapen")):
