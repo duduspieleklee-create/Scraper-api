@@ -8,7 +8,7 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
-    DATABASE_URL: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/kleinanzeigen"  # Default für lokal
+    DATABASE_URL: str
     POSTGRES_PASSWORD: Optional[str] = "postgres"
 
 
