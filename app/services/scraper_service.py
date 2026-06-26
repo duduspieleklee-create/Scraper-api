@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
-
 from app.core.database import AsyncSessionLocal
 from app.models.search import Search
 from app.models.seen_ad import SeenAd
@@ -18,14 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 async def filter_new_ads(db: AsyncSession, search_id: int, ads: list) -> list:
-    """Gibt nur Anzeigen zurueck, die noch nicht gesehen wurden."""
     if not ads:
         return []
-
     ad_ids = [a["ad_id"] for a in ads if a.get("ad_id")]
     if not ad_ids:
-        return ads  # Kein ad_id -> kein Dedup moeglich
-
+        return ads
     result = await db.execute(
         select(SeenAd.ad_id).where(
             SeenAd.search_id == search_id,
@@ -33,14 +29,12 @@ async def filter_new_ads(db: AsyncSession, search_id: int, ads: list) -> list:
         )
     )
     already_seen = {row[0] for row in result.fetchall()}
-
     new_ads = [a for a in ads if a.get("ad_id") not in already_seen]
     logger.info(f"Dedup: {len(ads)} gefunden, {len(new_ads)} neu, {len(already_seen)} bereits gesehen")
     return new_ads
 
 
 async def mark_ads_as_seen(db: AsyncSession, search_id: int, ads: list):
-    """Speichert neue Anzeigen in seen_ads."""
     for ad in ads:
         if not ad.get("ad_id"):
             continue
@@ -53,3 +47,86 @@ async def mark_ads_as_seen(db: AsyncSession, search_id: int, ads: list):
         ).on_conflict_do_nothing(constraint="uq_seen_ad")
         await db.execute(stmt)
     await db.commit()
+
+
+async def get_price_for_search(search: Search) -> int:
+    pricing = settings.INTERVAL_PRICING
+    interval = search.interval_minutes
+    if interval in pricing:
+        return pricing[interval]
+    return settings.TOKEN_COST_PER_RUN
+
+
+async def trigger_single_search(search_id: int, user_id: str):
+    async with AsyncSessionLocal() as db:
+        search = await db.get(Search, search_id)
+        if not search or not search.enabled:
+            return
+        is_first_run = search.last_run is None
+        cost = await get_price_for_search(search)
+        try:
+            proxy_info = None
+            try:
+                from scraper.proxy_manager import get_random_proxy, mark_proxy_success, mark_proxy_fail
+                proxy_info = await get_random_proxy(db)
+            except Exception:
+                pass
+            search_url = generate_search_url(
+                keyword=search.keyword,
+                location=search.location,
+                price_min=search.price_min,
+                price_max=search.price_max,
+                category=search.category,
+                sort=search.sort or "date"
+            )
+            all_ads = await get_filtered_search_result(
+                search_config=search,
+                filter_config=getattr(search, "filter_config", None),
+                store=None,
+                config=None,
+                proxy_info=proxy_info,
+            )
+            if proxy_info:
+                try:
+                    await mark_proxy_success(db, proxy_info["id"])
+                except Exception:
+                    pass
+            if is_first_run:
+                new_ads = all_ads[:10]
+            else:
+                new_ads = await filter_new_ads(db, search_id, all_ads)
+            if new_ads:
+                if not await check_rate_limit(db, user_id):
+                    logger.warning(f"Suche {search_id} skipped fuer User {user_id} - Rate Limit")
+                    search.last_run = func.now()
+                    await db.commit()
+                    return
+                deduct_result = await deduct_tokens_with_rollback(
+                    db=db, user_id=user_id, amount=cost, search_id=str(search_id)
+                )
+                if not deduct_result["success"]:
+                    search.enabled = False
+                    search.last_run = func.now()
+                    await db.commit()
+                    logger.warning(f"Suche {search_id} pausiert - nicht genug Tokens")
+                    return
+                await log_execution(db, user_id, search_id)
+                await mark_ads_as_seen(db, search_id, new_ads)
+                if search.callback_url:
+                    await send_webhook(search.callback_url, {
+                        "search_id": search.id, "name": search.name,
+                        "new_ads_count": len(new_ads), "ads": new_ads[:10]
+                    })
+                logger.info(f"Suche {search_id} fertig - {len(new_ads)} neue Anzeigen ({cost} Tokens)")
+            else:
+                logger.info(f"Suche {search_id}: 0 neue Anzeigen - keine Token faellig")
+        except Exception as e:
+            if proxy_info:
+                try:
+                    await mark_proxy_fail(db, proxy_info["id"])
+                except Exception:
+                    pass
+            logger.error(f"Fehler bei Suche {search_id}: {e}")
+        finally:
+            search.last_run = func.now()
+            await db.commit()
