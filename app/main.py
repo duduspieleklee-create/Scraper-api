@@ -34,6 +34,8 @@ templates.env.globals["timedelta"] = timedelta
 # Router einbinden
 app.include_router(searches.router)
 app.include_router(auth_router.router)
+app.include_router(proxies.router)
+app.include_router(dashboard_proxy_router)
 
 # In-memory storage fuer Dashboard (temporaer)
 recent_scrapes: List[Dict] = []
