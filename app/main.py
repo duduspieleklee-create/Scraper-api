@@ -25,6 +25,32 @@ templates = Jinja2Templates(directory="templates")
 
 logger = logging.getLogger(__name__)
 
+
+@app.on_event("startup")
+async def startup_event():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    async with AsyncSessionLocal() as db:
+        # Default User (falls nicht vorhanden)
+        result = await db.execute(text("SELECT COUNT(*) FROM users"))
+        if result.scalar() == 0:
+            await db.execute(text("""
+                INSERT INTO users (id, email, balance) 
+                VALUES ('default-user', 'default@example.com', 20)
+            """))
+            logger.info("Default User erstellt mit 20 Tokens")
+
+        # Default Suche (Beispiel)
+        result = await db.execute(text("SELECT COUNT(*) FROM searches"))
+        if result.scalar() == 0:
+            await db.execute(text("""
+                INSERT INTO searches (user_id, name, keyword, interval_minutes, enabled)
+                VALUES ('default-user', 'Test iPhone', 'iPhone', 15, true)
+            """))
+            logger.info("Default Suche erstellt")
+
+    logger.info("API gestartet mit Default Data - Dashboard unter /dashboard")
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
