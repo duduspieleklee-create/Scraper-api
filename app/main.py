@@ -17,7 +17,7 @@ app = FastAPI(
 # Router einbinden
 app.include_router(searches.router, prefix="/api/v1", tags=["searches"])
 
-# Dashboard
+# === Dashboard Setup ===
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
