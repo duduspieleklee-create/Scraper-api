@@ -10,13 +10,18 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: admin-auth
+    description: Admin authentication
+  - name: proxies
+    description: Proxy management
+  - name: users
+    description: Scraper user management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +29,339 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin-auth]
+      summary: Admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCredentials"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminToken"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/me:
+    get:
+      operationId: getAdminMe
+      tags: [admin-auth]
+      summary: Get current admin user
+      security:
+        - adminBearer: []
+      responses:
+        "200":
+          description: Current admin info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/proxies:
+    get:
+      operationId: listProxies
+      tags: [proxies]
+      summary: List all proxies
+      security:
+        - adminBearer: []
+      responses:
+        "200":
+          description: List of proxies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Proxy"
+    post:
+      operationId: createProxy
+      tags: [proxies]
+      summary: Add a new proxy
+      security:
+        - adminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProxyInput"
+      responses:
+        "201":
+          description: Proxy created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proxy"
+
+  /admin/proxies/{id}:
+    get:
+      operationId: getProxy
+      tags: [proxies]
+      summary: Get a proxy by ID
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proxy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proxy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateProxy
+      tags: [proxies]
+      summary: Update a proxy
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProxyUpdate"
+      responses:
+        "200":
+          description: Updated proxy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proxy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteProxy
+      tags: [proxies]
+      summary: Delete a proxy
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/proxies/{id}/toggle:
+    post:
+      operationId: toggleProxy
+      tags: [proxies]
+      summary: Enable or disable a proxy
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated proxy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proxy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/users:
+    get:
+      operationId: listScraperUsers
+      tags: [users]
+      summary: List all scraper users
+      security:
+        - adminBearer: []
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScraperUser"
+    post:
+      operationId: createScraperUser
+      tags: [users]
+      summary: Create a scraper user
+      security:
+        - adminBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScraperUserInput"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScraperUser"
+
+  /admin/users/{id}:
+    get:
+      operationId: getScraperUser
+      tags: [users]
+      summary: Get a scraper user
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScraperUser"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteScraperUser
+      tags: [users]
+      summary: Delete a scraper user
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/users/{id}/tokens:
+    post:
+      operationId: adjustUserTokens
+      tags: [users]
+      summary: Add or remove tokens from a user
+      security:
+        - adminBearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenAdjustment"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScraperUser"
+        "400":
+          description: Insufficient tokens
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /admin/proxies/stats:
+    get:
+      operationId: getProxyStats
+      tags: [proxies]
+      summary: Get proxy statistics summary
+      security:
+        - adminBearer: []
+      responses:
+        "200":
+          description: Proxy stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProxyStats"
+
 components:
+  securitySchemes:
+    adminBearer:
+      type: http
+      scheme: bearer
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +371,191 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    AdminCredentials:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AdminToken:
+      type: object
+      properties:
+        token:
+          type: string
+        username:
+          type: string
+      required:
+        - token
+        - username
+
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - username
+        - createdAt
+
+    Proxy:
+      type: object
+      properties:
+        id:
+          type: integer
+        host:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+        username:
+          type: ["string", "null"]
+        password:
+          type: ["string", "null"]
+        enabled:
+          type: boolean
+        label:
+          type: ["string", "null"]
+        lastUsedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - host
+        - port
+        - protocol
+        - enabled
+        - createdAt
+
+    ProxyInput:
+      type: object
+      properties:
+        host:
+          type: string
+          minLength: 1
+        port:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        protocol:
+          type: string
+          enum: [http, https, socks5]
+        username:
+          type: string
+        password:
+          type: string
+        label:
+          type: string
+        enabled:
+          type: boolean
+      required:
+        - host
+        - port
+        - protocol
+
+    ProxyUpdate:
+      type: object
+      properties:
+        host:
+          type: string
+        port:
+          type: integer
+        protocol:
+          type: string
+          enum: [http, https, socks5]
+        username:
+          type: string
+        password:
+          type: string
+        label:
+          type: string
+        enabled:
+          type: boolean
+
+    ProxyStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        enabled:
+          type: integer
+        disabled:
+          type: integer
+      required:
+        - total
+        - enabled
+        - disabled
+
+    ScraperUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        tokenBalance:
+          type: integer
+        externalId:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - tokenBalance
+        - createdAt
+        - updatedAt
+
+    ScraperUserInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        tokenBalance:
+          type: integer
+        externalId:
+          type: string
+        notes:
+          type: string
+      required:
+        - email
+
+    TokenAdjustment:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: Positive to add, negative to remove
+        reason:
+          type: string
+      required:
+        - amount
